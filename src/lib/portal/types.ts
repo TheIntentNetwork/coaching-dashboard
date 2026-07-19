@@ -10,6 +10,7 @@ export type PortalSetup = {
   user_id: string;
   student_name: string | null;
   meeting_date: string | null;
+  meeting_time: string | null;
   meeting_type: string | null;
   draft_document_id: string | null;
   advisor_id: string | null;

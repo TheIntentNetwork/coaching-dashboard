@@ -205,44 +205,23 @@ export function SettingsSection() {
         <div className="space-y-6">
           <div className="flex items-center justify-between py-2">
             <div className="max-w-md">
-              <p className="font-medium text-on-surface">Meeting Reminders</p>
-              <p className="text-sm text-on-surface-variant">
-                Get notified before scheduled meetings.
-              </p>
-            </div>
-            <Toggle
-              id="toggle-meetings"
-              checked={prefs.meeting_reminders}
-              disabled={prefsPending}
-              onChange={(v) => savePref({ ...prefs, meeting_reminders: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between border-t border-outline-variant/20 pt-6">
-            <div className="max-w-md">
-              <p className="font-medium text-on-surface">Document Updates</p>
-              <p className="text-sm text-on-surface-variant">
-                Alerts when new documents are added to SustainBL.
-              </p>
-            </div>
-            <Toggle
-              id="toggle-docs"
-              checked={prefs.document_updates}
-              disabled={prefsPending}
-              onChange={(v) => savePref({ ...prefs, document_updates: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between border-t border-outline-variant/20 pt-6">
-            <div className="max-w-md">
               <p className="font-medium text-on-surface">{coachLabel} Messages</p>
               <p className="text-sm text-on-surface-variant">
-                Notifications when your assigned {session.copy.coachNoun} sends a message.
+                Email notifications when your assigned {session.copy.coachNoun} sends a message.
               </p>
             </div>
             <Toggle
               id="toggle-messages"
               checked={prefs.coach_messages}
               disabled={prefsPending}
-              onChange={(v) => savePref({ ...prefs, coach_messages: v })}
+              onChange={(v) =>
+                savePref({
+                  ...prefs,
+                  coach_messages: v,
+                  meeting_reminders: false,
+                  document_updates: false,
+                })
+              }
             />
           </div>
           {prefsError ? (

@@ -77,18 +77,21 @@ export function AdvocateProfileSection() {
           {advocate ? (
             <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:gap-8 sm:text-left">
               <div className="relative shrink-0">
-                <div className="relative h-40 w-32 overflow-hidden rounded-xl bg-surface-container shadow-soft sm:h-64 sm:w-48">
+                <div className="relative h-36 w-36 overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface-container shadow-soft sm:h-44 sm:w-44">
                   {advocate.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- external, unconfigured domain
                     <img
                       src={advocate.avatarUrl}
                       alt={advocate.name}
-                      className="h-full w-full object-cover object-top"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-on-surface-variant/30">
-                      <UserRound size={44} />
-                    </div>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src="/images/advocate-sarah.png"
+                      alt=""
+                      className="h-full w-full object-cover opacity-90"
+                    />
                   )}
                 </div>
                 <div className="absolute -bottom-3 -right-3 rounded-full bg-primary p-2.5 text-on-primary shadow-soft sm:-bottom-4 sm:-right-4 sm:p-3">
@@ -124,7 +127,7 @@ export function AdvocateProfileSection() {
                 href="/setup"
                 className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary shadow-soft"
               >
-                Go to Setup
+                Go to Set Schedule
               </Link>
             </div>
           )}
@@ -141,7 +144,7 @@ export function AdvocateProfileSection() {
                     <span className="max-w-[10rem] truncate sm:max-w-none">{advocate.email}</span>
                   </a>
                 ) : null}
-                {advocate.phone ? (
+                {advocate.phone && !advocate.phone.startsWith("enc:") ? (
                   <a
                     href={`tel:${advocate.phone}`}
                     className="flex items-center gap-2 rounded-lg border border-outline-variant px-4 py-2.5 text-sm text-on-surface-variant transition-all hover:bg-surface-variant/30 sm:px-5"

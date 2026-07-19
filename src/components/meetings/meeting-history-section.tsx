@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Loader2, MapPin, Video } from "lucide-react";
-import type { PortalMeetingListItem } from "@/lib/portal/types";
+import { AdvocateBookingPanel } from "@/components/advocate/advocate-booking-panel";
+import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
+import { formatMeetingDateLabel, getMeetingType } from "@/lib/portal/meeting-types";
+import type { PortalAdvocate, PortalMeetingListItem } from "@/lib/portal/types";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -49,9 +52,12 @@ function StatusBadge({ meeting }: { meeting: PortalMeetingListItem }) {
 }
 
 export function MeetingHistorySection() {
+  const { setup } = usePortalSetup();
   const [meetings, setMeetings] = useState<PortalMeetingListItem[]>([]);
+  const [advocate, setAdvocate] = useState<PortalAdvocate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showBooking, setShowBooking] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,11 +65,16 @@ export function MeetingHistorySection() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/portal/meetings");
-        const json = await res.json();
+        const [meetingsRes, advocateRes] = await Promise.all([
+          fetch("/api/portal/meetings"),
+          fetch("/api/portal/advocate"),
+        ]);
+        const meetingsJson = await meetingsRes.json();
+        const advocateJson = await advocateRes.json();
         if (cancelled) return;
-        if (!res.ok) setError(json.error || "Failed to load meetings");
-        else setMeetings(json.meetings || []);
+        if (!meetingsRes.ok) setError(meetingsJson.error || "Failed to load meetings");
+        else setMeetings(meetingsJson.meetings || []);
+        if (advocateRes.ok) setAdvocate(advocateJson.advocate ?? null);
       } catch {
         if (!cancelled) setError("Failed to load meetings");
       } finally {
@@ -75,19 +86,59 @@ export function MeetingHistorySection() {
     };
   }, []);
 
+  const mt = getMeetingType(setup?.meeting_type);
+  const setupNotice =
+    setup?.meeting_date &&
+    (setup.status === "approved" ||
+      setup.status === "submitted" ||
+      setup.status === "under_review")
+      ? {
+          title: mt?.label || "Upcoming schedule",
+          when: `${formatMeetingDateLabel(setup.meeting_date)}${
+            setup.meeting_time ? ` · ${setup.meeting_time}` : ""
+          }`,
+        }
+      : null;
+
   return (
     <div className="page-pad pb-20 sm:pb-24">
-      <header className="mx-auto max-w-5xl pb-8 sm:pb-12">
-        <h1 className="page-title mb-3 sm:mb-4">Meetings</h1>
-        <p className="max-w-xl font-body text-sm leading-relaxed text-on-surface-variant/80 sm:text-base">
-          A chronological record of your advocacy journey. Review past decisions, access generated
-          summaries, and track commitments made during educational meetings.
-        </p>
+      <header className="mx-auto mb-8 flex max-w-5xl flex-col gap-4 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-xl">
+          <h1 className="page-title mb-3 sm:mb-4">Meetings</h1>
+          <p className="font-body text-sm leading-relaxed text-on-surface-variant/80 sm:text-base">
+            Review past meetings and summaries, and schedule another session with your advocate
+            when you have credits remaining.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowBooking((v) => !v)}
+          className="shrink-0 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-on-primary shadow-soft"
+        >
+          {showBooking ? "Hide scheduler" : "Schedule meeting"}
+        </button>
       </header>
 
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-5xl space-y-8">
+        {showBooking ? (
+          <AdvocateBookingPanel
+            advocateName={advocate?.name ?? null}
+            hasAdvocate={Boolean(advocate)}
+          />
+        ) : null}
+
+        {setupNotice ? (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">
+              Scheduled from Set Schedule
+            </p>
+            <p className="mt-1 font-headline text-xl text-on-surface">{setupNotice.title}</p>
+            <p className="text-sm text-on-surface-variant">{setupNotice.when}</p>
+          </div>
+        ) : null}
+
         {error ? (
-          <p className="mb-8 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
+          <p className="rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
             {error}
           </p>
         ) : null}
@@ -98,12 +149,14 @@ export function MeetingHistorySection() {
             Loading meetings…
           </div>
         ) : meetings.length === 0 ? (
-          <p className="py-16 text-on-surface-variant">
-            No meetings yet. Once your advocate schedules a meeting, it will show up here.
-          </p>
+          <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low px-6 py-10">
+            <p className="text-on-surface-variant">
+              No completed or booked advocate meetings yet. Use Schedule meeting to book a session
+              with your package credits.
+            </p>
+          </div>
         ) : (
           <>
-            {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
               {meetings.map((m) => (
                 <Link
@@ -130,7 +183,6 @@ export function MeetingHistorySection() {
               ))}
             </div>
 
-            {/* Desktop table */}
             <div className="hidden md:block">
               <div className="grid grid-cols-12 border-b border-outline-variant/30 px-4 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60 lg:px-6">
                 <div className="col-span-2">Date</div>

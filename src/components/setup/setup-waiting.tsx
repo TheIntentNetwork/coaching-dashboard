@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Clock3 } from "lucide-react";
+import { CalendarCheck2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 type SetupWaitingProps = {
-  variant: "waiting" | "approved";
+  variant: "waiting" | "approved" | "scheduled";
   studentName?: string | null;
-  stepLabel?: string;
+  meetingDateLabel?: string | null;
+  meetingTypeLabel?: string | null;
+  meetingTimeLabel?: string | null;
 };
 
-/** Shown across the setup wizard once a student's setup has been submitted or approved. */
-export function SetupWaiting({ variant, studentName, stepLabel }: SetupWaitingProps) {
+/** Shown after Set Schedule is completed (or historically approved). */
+export function SetupWaiting({
+  variant,
+  studentName,
+  meetingDateLabel,
+  meetingTypeLabel,
+  meetingTimeLabel,
+}: SetupWaitingProps) {
   const isApproved = variant === "approved";
-  const possessive = studentName ? `${studentName}'s` : "Your";
+  const isScheduled = variant === "scheduled" || variant === "waiting";
+  const name = studentName?.trim() || "there";
+
+  const whenBits = [meetingDateLabel, meetingTimeLabel].filter(Boolean).join(" · ");
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-12 sm:px-8 sm:py-16">
@@ -23,28 +34,28 @@ export function SetupWaiting({ variant, studentName, stepLabel }: SetupWaitingPr
         transition={{ duration: 0.35 }}
         className="max-w-lg text-center"
       >
-        <div
-          className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full ${
-            isApproved ? "bg-primary/10 text-primary" : "bg-tertiary/10 text-tertiary"
-          }`}
-        >
-          {isApproved ? <CheckCircle2 size={30} /> : <Clock3 size={30} />}
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+          {isApproved ? <CheckCircle2 size={30} /> : <CalendarCheck2 size={30} />}
         </div>
 
-        {stepLabel ? (
-          <span className="mb-2 block font-body text-sm font-semibold uppercase tracking-widest text-primary">
-            {stepLabel}
-          </span>
-        ) : null}
-
         <h1 className="mb-4 font-headline text-3xl leading-tight text-on-background sm:text-4xl md:text-5xl">
-          {isApproved ? "Setup Approved" : "Waiting for Your Advocate"}
+          {isApproved ? "You’re all set" : "Thanks for scheduling"}
         </h1>
 
+        <p className="mb-4 font-body text-lg text-on-surface">
+          Welcome, {name}.
+        </p>
+
         <p className="mb-8 font-body leading-relaxed text-on-surface-variant">
-          {isApproved
-            ? `${possessive} enrollment has been approved. Your dashboard is ready to go.`
-            : `${possessive} setup has been submitted and is currently under review by your advocate. We'll let you know as soon as it's confirmed.`}
+          {isScheduled
+            ? [
+                "We appreciate you locking in your next step.",
+                whenBits
+                  ? `Let’s meet${meetingTypeLabel ? ` for your ${meetingTypeLabel}` : ""} on ${whenBits}.`
+                  : "Your meeting is on the calendar.",
+                "You can start preparing anytime from your dashboard.",
+              ].join(" ")
+            : "Your dashboard is ready. Start preparation whenever you like."}
         </p>
 
         <Link

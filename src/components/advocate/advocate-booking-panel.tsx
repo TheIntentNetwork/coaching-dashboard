@@ -75,20 +75,33 @@ export function AdvocateBookingPanel({
   const [purpose, setPurpose] = useState<string>(BOOKING_PURPOSES[0]);
   const [balance, setBalance] = useState<SessionBalance | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
+  const [availableByDate, setAvailableByDate] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const cells = useMemo(() => buildCalendarDays(month), [month]);
   const monthLabel = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const availableTimes = availableByDate[selectedDate] || [];
+  const timeOptions = availableTimes.length > 0 ? availableTimes : BOOKING_TIMES;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoadingBalance(true);
       try {
-        const res = await fetch("/api/portal/sessions");
-        const json = await res.json();
-        if (!cancelled) setBalance(json.balance ?? null);
+        const [sessionsRes, availRes] = await Promise.all([
+          fetch("/api/portal/sessions"),
+          fetch("/api/portal/availability"),
+        ]);
+        const sessionsJson = await sessionsRes.json();
+        const availJson = await availRes.json();
+        if (cancelled) return;
+        setBalance(sessionsJson.balance ?? null);
+        const map: Record<string, string[]> = {};
+        for (const day of availJson.days || []) {
+          map[day.date] = day.times || [];
+        }
+        setAvailableByDate(map);
       } catch {
         if (!cancelled) setBalance(null);
       } finally {
@@ -99,6 +112,12 @@ export function AdvocateBookingPanel({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (availableTimes.length > 0 && !availableTimes.includes(time)) {
+      setTime(availableTimes[0]);
+    }
+  }, [selectedDate, availableTimes, time]);
 
   async function onConfirmBook() {
     if (!hasAdvocate) {
@@ -212,7 +231,11 @@ export function AdvocateBookingPanel({
         <div className="grid grid-cols-7 gap-1 text-center text-sm sm:gap-2">
           {cells.map((cell) => {
             const isPast = cell.date < today;
-            const selectable = cell.inMonth && !isPast;
+            const hasSlots = Boolean(availableByDate[cell.ymd]?.length);
+            const selectable =
+              cell.inMonth &&
+              !isPast &&
+              (Object.keys(availableByDate).length === 0 || hasSlots);
             const selected = selectedDate === cell.ymd && selectable;
             const isToday = toYmd(today) === cell.ymd;
             return (
@@ -252,7 +275,7 @@ export function AdvocateBookingPanel({
             onChange={(e) => setTime(e.target.value)}
             className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
           >
-            {BOOKING_TIMES.map((t) => (
+            {timeOptions.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>

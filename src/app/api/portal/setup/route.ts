@@ -48,6 +48,7 @@ export async function GET() {
 type SetupBody = {
   student_name?: string | null;
   meeting_date?: string | null;
+  meeting_time?: string | null;
   meeting_type?: string | null;
   draft_document_id?: string | null;
   submit?: boolean;
@@ -68,7 +69,7 @@ async function upsertSetup(request: Request) {
 
   const { data: existing } = await supabase
     .from("portal_setup")
-    .select("advisor_id")
+    .select("advisor_id, meeting_date, meeting_time, meeting_type, draft_document_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -81,14 +82,17 @@ async function upsertSetup(request: Request) {
   const patch: Record<string, unknown> = { user_id: user.id };
   if (body.student_name !== undefined) patch.student_name = body.student_name;
   if (body.meeting_date !== undefined) patch.meeting_date = body.meeting_date;
+  if (body.meeting_time !== undefined) patch.meeting_time = body.meeting_time;
   if (body.meeting_type !== undefined) patch.meeting_type = body.meeting_type;
   if (body.draft_document_id !== undefined) patch.draft_document_id = body.draft_document_id;
   if (advisorId) patch.advisor_id = advisorId;
 
   const submit = body.submit === true;
   if (submit) {
-    patch.status = "submitted";
+    // Client already chose an available slot — mark scheduled/approved (no review wait).
+    patch.status = "approved";
     patch.submitted_at = new Date().toISOString();
+    patch.reviewed_at = new Date().toISOString();
   }
 
   const { data: saved, error } = await supabase
@@ -102,6 +106,7 @@ async function upsertSetup(request: Request) {
   }
 
   const meetingDate: string | null = saved.meeting_date;
+  const meetingTime: string | null = saved.meeting_time;
   const meetingType: string | null = saved.meeting_type;
   const meetingTypeDef = getMeetingType(meetingType);
 
@@ -113,30 +118,38 @@ async function upsertSetup(request: Request) {
   }
 
   if (submit) {
-    await insertTimelineEvent(supabase, user.id, {
-      eventType: "setup_submitted",
-      title: "IEP setup submitted for review",
-      body: saved.student_name ? `Submitted for ${saved.student_name}` : null,
-    });
-
-    if (body.draft_document_id) {
+    if (body.draft_document_id || saved.draft_document_id) {
       await insertTimelineEvent(supabase, user.id, {
         eventType: "draft_uploaded",
         title: "IEP draft uploaded",
-        meta: { document_id: body.draft_document_id },
+        meta: { document_id: body.draft_document_id || saved.draft_document_id },
       });
     }
 
     if (meetingDate && meetingTypeDef) {
       await insertTimelineEvent(supabase, user.id, {
-        eventType: "meeting_confirmed",
-        title: `${meetingTypeDef.label} confirmed`,
-        body: meetingTypeDef.prepFocus,
+        eventType: "meeting_scheduled",
+        title: `${meetingTypeDef.label} scheduled`,
+        body: meetingTime ? `Scheduled for ${meetingTime}` : null,
+        isUpcoming: false,
+        eventAt: `${meetingDate}T12:00:00.000Z`,
+        meta: {
+          meeting_date: meetingDate,
+          meeting_time: meetingTime,
+          meeting_type: meetingType,
+        },
+      });
+
+      await insertTimelineEvent(supabase, user.id, {
+        eventType: "waiting_for_meeting",
+        title: "Waiting for the meeting",
+        body: "Your schedule is set. Prep when you’re ready.",
         isUpcoming: true,
         eventAt: `${meetingDate}T12:00:00.000Z`,
         meta: { meeting_date: meetingDate, meeting_type: meetingType },
       });
     }
+
   }
 
   return NextResponse.json({ setup: saved });

@@ -18,15 +18,15 @@ export function getSidebarNav(
 
   const items: NavItem[] = [];
   if (includeSetup) {
-    items.push({ id: "setup", label: "Setup", href: "/setup", icon: "settings" });
+    items.push({ id: "setup", label: "Set Schedule", href: "/setup", icon: "settings" });
   }
 
   items.push(
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "home" },
     { id: "sustainbl", label: "SustainBL", href: "/sustainbl", icon: "book-open" },
     { id: "meetings", label: "Meetings", href: "/meetings", icon: "mic" },
-    { id: "follow-up", label: "Follow-up", href: "/follow-up", icon: "mail" },
-    { id: "reports", label: "PDF Export", href: "/reports", icon: "file-text" },
+    { id: "follow-up", label: "Messages", href: "/follow-up", icon: "mail" },
+    { id: "reports", label: "Family Reports", href: "/reports", icon: "file-text" },
     {
       id: "my-advocate",
       label: copy.coachNavLabel,

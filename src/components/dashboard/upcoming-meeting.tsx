@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { CoverImage } from "@/components/ui/cover-image";
 import { IMAGES } from "@/lib/images";
@@ -50,17 +49,10 @@ export function UpcomingMeeting() {
               <span className="shrink-0 text-sm font-bold text-on-surface-variant">Still not set</span>
             </div>
             <p className="text-sm text-on-surface-variant">
-              Set your next meeting date in Setup to see it here.
+              Set your next meeting date in Set Schedule to see it here.
             </p>
           </div>
         )}
-
-        <Link
-          href="/sustainbl/prep"
-          className="block w-full rounded-lg border border-outline py-3 text-center text-sm font-bold text-on-surface transition-colors hover:bg-surface-container"
-        >
-          View Prep Kit
-        </Link>
       </div>
     </section>
   );

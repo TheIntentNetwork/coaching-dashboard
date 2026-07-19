@@ -5,6 +5,7 @@ import { Download, Eye, Loader2, Plus, Trash2 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAppSession } from "@/components/auth/session-provider";
+import { mimeLabel } from "@/lib/documents/mime-label";
 
 type PortalDocument = {
   id: string;
@@ -134,7 +135,7 @@ export function DocumentsSection() {
             ref={inputRef}
             type="file"
             className="hidden"
-            accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.doc,.docx,application/pdf,text/plain"
+            accept="application/pdf,.pdf"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void onUpload(file);
@@ -205,7 +206,7 @@ export function DocumentsSection() {
         </div>
       ) : documents.length === 0 ? (
         <p className="px-2 py-12 text-on-surface-variant sm:px-6">
-          No documents yet. Upload a PDF or text file to get started.
+          No documents yet. Upload a PDF to get started.
         </p>
       ) : (
         documents.map((doc) => {
@@ -236,7 +237,7 @@ export function DocumentsSection() {
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-surface-variant px-2.5 py-0.5 text-[10px] font-medium text-on-surface-variant">
-                      {doc.mime_type?.split("/").pop() || "file"}
+                      {mimeLabel(doc.mime_type, doc.name)}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${toneText}`}
@@ -287,7 +288,7 @@ export function DocumentsSection() {
                 </div>
                 <div className="col-span-2 text-center">
                   <span className="rounded-full bg-surface-variant px-3 py-1 text-xs font-medium text-on-surface-variant">
-                    {doc.mime_type?.split("/").pop() || "file"}
+                    {mimeLabel(doc.mime_type, doc.name)}
                   </span>
                 </div>
                 <div className="col-span-2 text-center">

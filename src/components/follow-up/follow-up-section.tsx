@@ -109,16 +109,19 @@ export function FollowUpSection() {
   }
 
   const activeThread = threads.find((t) => t.id === activeThreadId) || null;
-  const lastMessage = messages[messages.length - 1];
-  const waitingForAdvocate = Boolean(
-    lastMessage && lastMessage.sender_type === "veteran",
-  );
+  let consecutiveClient = 0;
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].sender_type !== "veteran") break;
+    consecutiveClient += 1;
+  }
+  const atMessageLimit = consecutiveClient >= 2;
+  const waitingForAdvocate = consecutiveClient > 0;
 
   return (
     <div className="page-pad mx-auto max-w-4xl pb-16 sm:pb-20">
       <section className="mb-6 sm:mb-10">
         <span className="font-label text-xs font-bold uppercase tracking-widest text-tertiary">
-          Follow-Up
+          Messages
         </span>
         <h1 className="page-title mt-3 sm:mt-4">Messages</h1>
         <p className="mt-3 max-w-2xl font-body text-base leading-relaxed text-on-surface-variant sm:mt-4 sm:text-lg">
@@ -191,7 +194,9 @@ export function FollowUpSection() {
           {waitingForAdvocate ? (
             <div className="border-t border-outline-variant/30 bg-surface-container-low px-4 py-3 sm:px-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                Waiting for {noun} response
+                {atMessageLimit
+                  ? `Waiting for ${noun} response (2-message limit)`
+                  : `Waiting for ${noun} response · ${2 - consecutiveClient} message left`}
               </p>
             </div>
           ) : null}
@@ -203,16 +208,21 @@ export function FollowUpSection() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  void sendMessage();
+                  if (!atMessageLimit) void sendMessage();
                 }
               }}
-              placeholder={`Write a message to your ${noun}…`}
+              placeholder={
+                atMessageLimit
+                  ? `Wait for your ${noun} to reply before sending more…`
+                  : `Write a message to your ${noun}…`
+              }
               rows={2}
-              className="w-full flex-1 resize-none rounded-lg border border-outline-variant/50 bg-transparent px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
+              disabled={atMessageLimit}
+              className="w-full flex-1 resize-none rounded-lg border border-outline-variant/50 bg-transparent px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary disabled:opacity-50"
             />
             <button
               type="button"
-              disabled={sending || !draft.trim()}
+              disabled={sending || !draft.trim() || atMessageLimit}
               onClick={() => void sendMessage()}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60 sm:w-auto"
             >

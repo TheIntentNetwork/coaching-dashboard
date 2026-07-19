@@ -7,7 +7,20 @@ import { motion } from "framer-motion";
 import { CoverImage } from "@/components/ui/cover-image";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import { SetupWaiting } from "@/components/setup/setup-waiting";
+import { getMeetingType } from "@/lib/portal/meeting-types";
 import { IMAGES } from "@/lib/images";
+
+function formatMeetingDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function SetupDocumentation() {
   const router = useRouter();
@@ -97,12 +110,21 @@ export function SetupDocumentation() {
     );
   }
 
-  if (setup?.status === "submitted" || setup?.status === "under_review") {
-    return <SetupWaiting variant="waiting" studentName={setup.student_name} />;
-  }
-
-  if (setup?.status === "approved") {
-    return <SetupWaiting variant="approved" studentName={setup.student_name} />;
+  if (
+    setup?.status === "submitted" ||
+    setup?.status === "under_review" ||
+    setup?.status === "approved"
+  ) {
+    const mt = getMeetingType(setup.meeting_type);
+    return (
+      <SetupWaiting
+        variant="scheduled"
+        studentName={setup.student_name}
+        meetingDateLabel={formatMeetingDate(setup.meeting_date)}
+        meetingTimeLabel={setup.meeting_time}
+        meetingTypeLabel={mt?.label || setup.meeting_type}
+      />
+    );
   }
 
   return (
@@ -119,7 +141,7 @@ export function SetupDocumentation() {
             Upload your latest IEP or evaluation report to begin building your advocacy dashboard.
           </p>
         </div>
-        <div className="relative mb-6 hidden aspect-[4/5] overflow-hidden rounded-2xl border border-outline-variant/40 shadow-soft lg:block">
+        <div className="relative mb-6 hidden aspect-square overflow-hidden rounded-2xl border border-outline-variant/40 shadow-soft lg:block">
           <CoverImage src={IMAGES.setupDocs} alt="Organized documents and folder" />
           <div className="absolute inset-0 bg-gradient-to-t from-on-surface/30 to-transparent" />
         </div>
@@ -154,7 +176,7 @@ export function SetupDocumentation() {
               ref={inputRef}
               type="file"
               className="hidden"
-              accept=".pdf,image/*"
+              accept="application/pdf,.pdf"
               disabled={uploading}
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -176,7 +198,7 @@ export function SetupDocumentation() {
               </span>
             </p>
             <p className="mt-6 text-[10px] uppercase tracking-widest text-on-surface-variant/50">
-              Maximum file size: 25MB
+              PDF only · Maximum 50MB
             </p>
           </label>
 
@@ -185,12 +207,12 @@ export function SetupDocumentation() {
           <div className="mt-8 space-y-5">
             {[
               {
-                title: "Digital or Scanned",
-                body: "We accept PDFs, high-quality JPGs, or document scans from your phone.",
+                title: "PDF required",
+                body: "Upload a PDF of your latest IEP or evaluation report for a reliable preview.",
               },
               {
                 title: "Private & searchable",
-                body: "Files are stored securely in SustainBL for your advocate review and journey.",
+                body: "Files are stored securely in SustainBL and indexed for Ask Copilot.",
               },
             ].map((item) => (
               <div key={item.title} className="flex items-start gap-4">
@@ -221,7 +243,7 @@ export function SetupDocumentation() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-10 py-4 font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60 sm:w-auto"
             >
               {completing ? <Loader2 size={18} className="animate-spin" /> : null}
-              Complete Setup
+              Complete Schedule
             </button>
           </div>
         </div>

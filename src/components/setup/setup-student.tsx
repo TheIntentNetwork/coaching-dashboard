@@ -8,7 +8,20 @@ import { CoverImage } from "@/components/ui/cover-image";
 import { useAppSession } from "@/components/auth/session-provider";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import { SetupWaiting } from "@/components/setup/setup-waiting";
+import { getMeetingType } from "@/lib/portal/meeting-types";
 import { IMAGES } from "@/lib/images";
+
+function formatMeetingDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function SetupStudent() {
   const router = useRouter();
@@ -56,12 +69,21 @@ export function SetupStudent() {
     );
   }
 
-  if (setup?.status === "submitted" || setup?.status === "under_review") {
-    return <SetupWaiting variant="waiting" studentName={setup.student_name} />;
-  }
-
-  if (setup?.status === "approved") {
-    return <SetupWaiting variant="approved" studentName={setup.student_name} />;
+  if (
+    setup?.status === "submitted" ||
+    setup?.status === "under_review" ||
+    setup?.status === "approved"
+  ) {
+    const mt = getMeetingType(setup.meeting_type);
+    return (
+      <SetupWaiting
+        variant={setup.status === "approved" ? "scheduled" : "scheduled"}
+        studentName={setup.student_name}
+        meetingDateLabel={formatMeetingDate(setup.meeting_date)}
+        meetingTimeLabel={setup.meeting_time}
+        meetingTypeLabel={mt?.label || setup.meeting_type}
+      />
+    );
   }
 
   return (
@@ -74,10 +96,14 @@ export function SetupStudent() {
           className="order-2 max-w-lg lg:order-1"
         >
           <div className="mb-6 sm:mb-8">
-            <span className="mb-2 block font-body text-sm font-semibold uppercase tracking-widest text-primary">
-              Welcome
-            </span>
-            <h1 className="page-title text-on-background">Let&apos;s get started</h1>
+            <h1 className="page-title text-on-background">
+              Welcome,{" "}
+              <span className="whitespace-nowrap">{welcomeName}</span>
+            </h1>
+            <p className="mt-3 font-body text-sm leading-relaxed text-on-surface-variant sm:text-base">
+              Let&apos;s set your schedule for the IEP journey. We&apos;ll use your name throughout
+              — you can update it anytime in Settings.
+            </p>
           </div>
 
           {setup?.status === "needs_changes" && setup.review_note ? (
@@ -93,19 +119,6 @@ export function SetupStudent() {
           ) : null}
 
           <form className="space-y-8" onSubmit={handleContinue}>
-            <div className="space-y-3">
-              <p className="font-body text-sm uppercase tracking-wider text-on-surface-variant">
-                Welcome,
-              </p>
-              <p className="font-headline text-3xl text-on-background sm:text-4xl md:text-5xl">
-                {welcomeName}
-              </p>
-              <p className="font-body text-sm leading-relaxed text-on-surface-variant">
-                We&apos;ll use this name throughout your advocacy journey. You can update it anytime
-                in Settings.
-              </p>
-            </div>
-
             {error ? <p className="text-sm text-tertiary">{error}</p> : null}
             {loadError ? <p className="text-sm text-tertiary">{loadError}</p> : null}
 
@@ -129,7 +142,7 @@ export function SetupStudent() {
         </motion.div>
 
         <div className="order-1 hidden justify-center sm:flex lg:order-2 lg:justify-end">
-          <div className="relative aspect-[4/5] w-full max-w-md overflow-hidden rounded-2xl shadow-soft">
+          <div className="relative aspect-square w-full max-w-md overflow-hidden rounded-2xl shadow-soft">
             <CoverImage src={IMAGES.setupStudent} alt="Parent and child — advocacy journey" priority />
             <div className="absolute inset-0 bg-primary/10 mix-blend-multiply" />
             <div className="absolute bottom-6 left-6 right-6 rounded-xl border border-outline-variant/20 bg-surface/85 p-4 backdrop-blur-md">

@@ -48,6 +48,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
   }
 
+  const isPdf =
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    return NextResponse.json(
+      { error: "Only PDF files are accepted." },
+      { status: 400 },
+    );
+  }
+
   if (file.size <= 0 || file.size > MAX_BYTES) {
     return NextResponse.json({ error: "File must be between 1 byte and 50MB" }, { status: 400 });
   }

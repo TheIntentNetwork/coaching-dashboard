@@ -19,6 +19,7 @@ function isActive(pathname: string, href: string) {
   if (href === "/setup") return pathname.startsWith("/setup");
   if (href === "/advocate") return pathname.startsWith("/advocate");
   if (href === "/ask-copilot") return pathname.startsWith("/ask-copilot");
+  if (href === "/follow-up") return pathname.startsWith("/follow-up");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -99,6 +100,12 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
 
 function SidebarBrand({ onNavigate }: { onNavigate?: () => void }) {
   const { theme, copy, displayName } = useAppSession();
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("");
 
   return (
     <div className="border-b border-outline-variant/30 px-4 py-4 sm:px-5 sm:py-6">
@@ -111,11 +118,12 @@ function SidebarBrand({ onNavigate }: { onNavigate?: () => void }) {
         priority
         onClick={onNavigate}
       />
-      <p className="mt-3 truncate font-body text-xs text-on-surface-variant">
-        {displayName}
-        <span className="mx-1.5 text-outline-variant">·</span>
-        {copy.programLabel}
-      </p>
+      <div className="mt-4 flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-outline-variant/50 bg-surface-container-low font-label text-xs font-bold text-primary">
+          {initials || "U"}
+        </div>
+        <p className="truncate font-body text-sm font-medium text-on-surface">{displayName}</p>
+      </div>
     </div>
   );
 }

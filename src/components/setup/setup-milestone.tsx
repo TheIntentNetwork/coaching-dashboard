@@ -1,20 +1,37 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowRight, Calendar, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { CoverImage } from "@/components/ui/cover-image";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import { SetupWaiting } from "@/components/setup/setup-waiting";
-import { MEETING_TYPES } from "@/lib/portal/meeting-types";
+import { MEETING_TYPES, getMeetingType } from "@/lib/portal/meeting-types";
 import { IMAGES } from "@/lib/images";
+
+type AvailableDay = { date: string; times: string[] };
+
+function formatMeetingDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function SetupMilestone() {
   const router = useRouter();
   const { setup, loading, setSetup } = usePortalSetup();
   const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("");
   const [meetingType, setMeetingType] = useState("");
+  const [days, setDays] = useState<AvailableDay[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +39,50 @@ export function SetupMilestone() {
   if (!loading && !initialized) {
     setInitialized(true);
     setMeetingDate(setup?.meeting_date || "");
+    setMeetingTime(setup?.meeting_time || "");
     setMeetingType(setup?.meeting_type || "");
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingSlots(true);
+      try {
+        const res = await fetch("/api/portal/availability");
+        const json = await res.json();
+        if (!cancelled) setDays(json.days || []);
+      } catch {
+        if (!cancelled) setDays([]);
+      } finally {
+        if (!cancelled) setLoadingSlots(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const timesForDate = useMemo(() => {
+    const day = days.find((d) => d.date === meetingDate);
+    return day?.times || [];
+  }, [days, meetingDate]);
+
+  useEffect(() => {
+    if (timesForDate.length === 0) {
+      if (meetingTime) setMeetingTime("");
+      return;
+    }
+    if (!timesForDate.includes(meetingTime)) {
+      setMeetingTime(timesForDate[0]);
+    }
+  }, [timesForDate, meetingTime]);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!meetingDate || !meetingTime || !meetingType) {
+      setError("Please choose an available date, time, and meeting type.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -34,8 +90,9 @@ export function SetupMilestone() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meeting_date: meetingDate || null,
-          meeting_type: meetingType || null,
+          meeting_date: meetingDate,
+          meeting_time: meetingTime,
+          meeting_type: meetingType,
         }),
       });
       const json = await res.json();
@@ -60,12 +117,21 @@ export function SetupMilestone() {
     );
   }
 
-  if (setup?.status === "submitted" || setup?.status === "under_review") {
-    return <SetupWaiting variant="waiting" studentName={setup.student_name} />;
-  }
-
-  if (setup?.status === "approved") {
-    return <SetupWaiting variant="approved" studentName={setup.student_name} />;
+  if (
+    setup?.status === "submitted" ||
+    setup?.status === "under_review" ||
+    setup?.status === "approved"
+  ) {
+    const mt = getMeetingType(setup.meeting_type);
+    return (
+      <SetupWaiting
+        variant="scheduled"
+        studentName={setup.student_name}
+        meetingDateLabel={formatMeetingDate(setup.meeting_date)}
+        meetingTimeLabel={setup.meeting_time}
+        meetingTypeLabel={mt?.label || setup.meeting_type}
+      />
+    );
   }
 
   const selectedMeetingType = MEETING_TYPES.find((mt) => mt.id === meetingType) || null;
@@ -103,7 +169,7 @@ export function SetupMilestone() {
           <div className="mb-6">
             <div className="mb-3 flex items-center gap-2">
               <span className="font-body text-sm font-bold uppercase tracking-wider text-primary">
-                Onboarding
+                Set Schedule
               </span>
               <span className="h-px w-8 bg-outline-variant" />
               <span className="font-body text-sm text-on-surface-variant">Step 2 of 3</span>
@@ -112,30 +178,65 @@ export function SetupMilestone() {
               The Next Milestone
             </h1>
             <p className="max-w-md font-body leading-relaxed text-on-surface-variant">
-              Effective advocacy begins with planning. Mark the calendar for your next meeting so we
-              can start building your strategy today.
+              Choose a time that matches your advocate&apos;s availability so we can plan your
+              preparation around a real slot.
             </p>
-          </div>
-
-          <div className="mb-8 flex h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
-            <div className="h-full w-1/3 bg-outline-variant" />
-            <div className="h-full w-1/3 bg-primary" />
-            <div className="h-full w-1/3 bg-surface-container" />
           </div>
 
           <form className="space-y-8" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="meeting-date" className="mb-3 block font-headline text-xl text-on-background">
-                When is your next meeting?
+                Available date
               </label>
-              <input
-                id="meeting-date"
-                type="date"
-                value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
-                className="w-full border-b-2 border-outline-variant/60 bg-transparent pb-2 font-body text-lg text-on-surface outline-none focus:border-primary"
-              />
+              {loadingSlots ? (
+                <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+                  <Loader2 size={16} className="animate-spin" />
+                  Loading advocate availability…
+                </div>
+              ) : days.length === 0 ? (
+                <p className="text-sm text-tertiary">
+                  No open slots from your advocate yet. Please check back soon, or message them
+                  from Messages.
+                </p>
+              ) : (
+                <select
+                  id="meeting-date"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                  className="w-full appearance-none border-b-2 border-outline-variant/60 bg-transparent pb-2 font-body text-lg text-on-surface outline-none focus:border-primary"
+                  required
+                >
+                  <option value="">Select a date</option>
+                  {days.map((d) => (
+                    <option key={d.date} value={d.date}>
+                      {formatMeetingDate(d.date)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
+            <div>
+              <label htmlFor="meeting-time" className="mb-3 block font-headline text-xl text-on-background">
+                Available time
+              </label>
+              <select
+                id="meeting-time"
+                value={meetingTime}
+                onChange={(e) => setMeetingTime(e.target.value)}
+                disabled={!meetingDate || timesForDate.length === 0}
+                className="w-full appearance-none border-b-2 border-outline-variant/60 bg-transparent pb-2 font-body text-lg text-on-surface outline-none focus:border-primary disabled:opacity-50"
+                required
+              >
+                <option value="">Select a time</option>
+                {timesForDate.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label htmlFor="meeting-type" className="mb-3 block font-headline text-xl text-on-background">
                 What type of meeting is it?
@@ -145,6 +246,7 @@ export function SetupMilestone() {
                 value={meetingType}
                 onChange={(e) => setMeetingType(e.target.value)}
                 className="w-full appearance-none border-b-2 border-outline-variant/60 bg-transparent pb-2 font-body text-lg text-on-surface outline-none focus:border-primary"
+                required
               >
                 <option value="">Select meeting type</option>
                 {MEETING_TYPES.map((mt) => (
@@ -168,7 +270,7 @@ export function SetupMilestone() {
               </button>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || loadingSlots || days.length === 0}
                 className="flex items-center gap-3 rounded-lg bg-primary px-8 py-3.5 font-body text-base font-bold text-on-primary shadow-soft disabled:opacity-60"
               >
                 {saving ? (

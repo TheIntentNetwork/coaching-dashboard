@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/portal/server/auth";
 import { getProfileEmail } from "@/lib/portal/server/profile";
-import { getAdvocateForUser } from "@/lib/portal/server/advisor";
-import { decryptField, isEncryptedField } from "@/lib/encryption";
+import { resolveAdvisorId } from "@/lib/portal/server/advisor";
+import { getAdvocateAvailableDays } from "@/lib/portal/server/availability";
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,21 +12,11 @@ export async function GET() {
   const { user } = auth;
 
   const email = await getProfileEmail(supabase, user.id);
-  const advocate = await getAdvocateForUser(user.id, email);
-
-  if (!advocate) {
-    return NextResponse.json({ advocate: null });
+  const advisorId = await resolveAdvisorId(user.id, email);
+  if (!advisorId) {
+    return NextResponse.json({ days: [], advisorId: null });
   }
 
-  let phone = advocate.phone;
-  if (isEncryptedField(phone)) {
-    phone = decryptField(phone);
-  }
-
-  return NextResponse.json({
-    advocate: {
-      ...advocate,
-      phone,
-    },
-  });
+  const days = await getAdvocateAvailableDays(advisorId);
+  return NextResponse.json({ days, advisorId });
 }

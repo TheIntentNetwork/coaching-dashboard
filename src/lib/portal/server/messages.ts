@@ -100,6 +100,28 @@ export async function sendVeteranMessage(
     }
   }
 
+  // Max 2 consecutive client messages until the advocate/coach replies.
+  const noun = await coachNounForUser(supabase, userId);
+  const { data: recent } = await supabase
+    .from("secure_messages")
+    .select("sender_type")
+    .eq("thread_id", thread.id)
+    .order("sent_at", { ascending: false })
+    .limit(2);
+
+  let streak = 0;
+  for (const m of recent || []) {
+    if (m.sender_type !== "veteran") break;
+    streak += 1;
+  }
+  if (streak >= 2) {
+    return {
+      ok: false,
+      error: `You can send up to 2 messages at a time. Please wait for your ${noun} to reply.`,
+      status: 429,
+    };
+  }
+
   const { data: message, error: messageError } = await supabase
     .from("secure_messages")
     .insert({
