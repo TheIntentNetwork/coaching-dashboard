@@ -3,7 +3,7 @@ import { AdvocatePaymentScreen } from "@/components/advocate/advocate-payment-sc
 
 export default function AdvocatePaymentPage() {
   return (
-    <Suspense fallback={<div className="px-12 py-16 text-on-surface-variant">Loading payment…</div>}>
+    <Suspense fallback={<div className="page-pad text-on-surface-variant">Loading payment…</div>}>
       <AdvocatePaymentScreen />
     </Suspense>
   );

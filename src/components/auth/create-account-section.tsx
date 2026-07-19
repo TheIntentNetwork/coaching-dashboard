@@ -15,22 +15,22 @@ export function CreateAccountSection() {
   );
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-24">
+    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-24">
       <motion.section
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="order-2 flex flex-col items-start space-y-10 lg:order-1"
+        className="order-2 flex flex-col items-start space-y-8 lg:order-1 lg:space-y-10"
       >
         <header className="space-y-4">
           <BrandLogo href="/sign-in" size="md" priority />
-          <h1 className="font-display text-5xl leading-[1.1] tracking-tight text-on-surface md:text-7xl">
+          <h1 className="font-display text-4xl leading-[1.1] tracking-tight text-on-surface sm:text-5xl md:text-7xl">
             Create account
           </h1>
           <p className="max-w-md font-body text-lg text-on-surface-variant">
-            Choose your program. We use the same account system as VA Claims — your{" "}
-            <span className="font-semibold text-on-surface">service type</span> drives theme and
-            labels.
+            Choose your program. Your account personalizes the portal for{" "}
+            <span className="font-semibold text-on-surface">IEP Services</span> or{" "}
+            <span className="font-semibold text-on-surface">Coaching</span>.
           </p>
         </header>
 
@@ -178,15 +178,14 @@ export function CreateAccountSection() {
           <div className="flex items-center space-x-4 opacity-60">
             <Shield size={20} />
             <p className="font-body text-xs leading-relaxed">
-              Creates a Supabase auth user and sets <code>profiles.service_type</code> to iep or
-              coaching.
+              Your information is protected. We only use it to set up your SustainBL portal.
             </p>
           </div>
         </div>
       </motion.section>
 
       <motion.section
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
         className="order-1 lg:order-2"
       >

@@ -1,78 +1,134 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { CoverImage } from "@/components/ui/cover-image";
+import { useAppSession } from "@/components/auth/session-provider";
+import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
+import { SetupWaiting } from "@/components/setup/setup-waiting";
 import { IMAGES } from "@/lib/images";
 
 export function SetupStudent() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const { displayName } = useAppSession();
+  const { setup, loading, error: loadError, setSetup } = usePortalSetup();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const welcomeName = setup?.student_name || displayName || "there";
+
+  async function handleContinue(e: FormEvent) {
+    e.preventDefault();
+    const name = welcomeName.trim();
+    if (!name) {
+      setError("Please update your name in Settings before continuing.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/portal/setup", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_name: name }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Something went wrong. Please try again.");
+        return;
+      }
+      setSetup(json.setup);
+      router.push("/setup/milestone");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24 text-on-surface-variant">
+        <Loader2 className="animate-spin" size={22} />
+      </div>
+    );
+  }
+
+  if (setup?.status === "submitted" || setup?.status === "under_review") {
+    return <SetupWaiting variant="waiting" studentName={setup.student_name} />;
+  }
+
+  if (setup?.status === "approved") {
+    return <SetupWaiting variant="approved" studentName={setup.student_name} />;
+  }
 
   return (
-    <div className="flex flex-1 items-center justify-center px-8 py-10 md:px-12 md:py-14">
-      <div className="grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+    <div className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 sm:py-10 md:px-12 md:py-14">
+      <div className="grid w-full max-w-6xl grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           className="order-2 max-w-lg lg:order-1"
         >
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <span className="mb-2 block font-body text-sm font-semibold uppercase tracking-widest text-primary">
-              Step 1 of 3
+              Welcome
             </span>
-            <h1 className="font-headline text-5xl leading-tight text-on-background md:text-6xl">
-              The Student
-            </h1>
+            <h1 className="page-title text-on-background">Let&apos;s get started</h1>
           </div>
-          <form
-            className="space-y-8"
-            onSubmit={(e) => {
-              e.preventDefault();
-              router.push("/setup/milestone");
-            }}
-          >
+
+          {setup?.status === "needs_changes" && setup.review_note ? (
+            <div className="mb-6 flex items-start gap-3 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3">
+              <AlertCircle className="mt-0.5 shrink-0 text-tertiary" size={18} />
+              <div>
+                <p className="text-sm font-semibold text-tertiary">
+                  Changes requested by your advocate
+                </p>
+                <p className="mt-1 text-sm text-on-surface-variant">{setup.review_note}</p>
+              </div>
+            </div>
+          ) : null}
+
+          <form className="space-y-8" onSubmit={handleContinue}>
             <div className="space-y-3">
-              <label
-                htmlFor="child-name"
-                className="font-body text-sm uppercase tracking-wider text-on-surface-variant"
-              >
-                Preferred Name
-              </label>
-              <input
-                id="child-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter their name here..."
-                className="w-full border-b border-outline-variant bg-transparent py-3 font-headline text-3xl text-on-background outline-none placeholder:text-outline-variant/60 focus:border-primary md:text-4xl"
-              />
-              <p className="font-body text-xs italic text-on-surface-variant/60">
-                We&apos;ll use this name throughout your advocacy journey and IEP preparations.
+              <p className="font-body text-sm uppercase tracking-wider text-on-surface-variant">
+                Welcome,
+              </p>
+              <p className="font-headline text-3xl text-on-background sm:text-4xl md:text-5xl">
+                {welcomeName}
+              </p>
+              <p className="font-body text-sm leading-relaxed text-on-surface-variant">
+                We&apos;ll use this name throughout your advocacy journey. You can update it anytime
+                in Settings.
               </p>
             </div>
+
+            {error ? <p className="text-sm text-tertiary">{error}</p> : null}
+            {loadError ? <p className="text-sm text-tertiary">{loadError}</p> : null}
+
             <div className="flex items-center gap-6 pt-2">
               <button
                 type="submit"
-                className="group flex items-center gap-3 rounded-lg bg-primary px-10 py-4 font-body text-base font-bold text-on-primary shadow-soft transition-all active:scale-95"
+                disabled={saving}
+                className="group flex items-center gap-3 rounded-lg bg-primary px-10 py-4 font-body text-base font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60"
               >
-                Continue
-                <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/setup/milestone")}
-                className="font-body text-sm text-on-surface-variant underline-offset-4 hover:text-on-surface hover:underline"
-              >
-                Skip for now
+                {saving ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
               </button>
             </div>
           </form>
         </motion.div>
 
-        <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
+        <div className="order-1 hidden justify-center sm:flex lg:order-2 lg:justify-end">
           <div className="relative aspect-[4/5] w-full max-w-md overflow-hidden rounded-2xl shadow-soft">
             <CoverImage src={IMAGES.setupStudent} alt="Parent and child — advocacy journey" priority />
             <div className="absolute inset-0 bg-primary/10 mix-blend-multiply" />

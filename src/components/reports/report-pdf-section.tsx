@@ -1,116 +1,227 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Download, Printer } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Download, Loader2, Printer } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { MarkdownContent } from "@/components/ui/markdown-content";
+
+type ReportDetail = {
+  id: string;
+  title: string;
+  issueDate: string;
+  clientName: string;
+  advisorName: string | null;
+  meetingType: string | null;
+  status: string;
+  summaryMarkdown: string | null;
+  questions: unknown;
+  notes: unknown;
+  checklist: unknown;
+};
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        if (typeof record.title === "string") return record.title;
+        if (typeof record.text === "string") return record.text;
+        if (typeof record.content === "string") return record.content;
+      }
+      return null;
+    })
+    .filter((item): item is string => Boolean(item));
+}
 
 export function ReportPdfSection({ id }: { id: string }) {
+  const [report, setReport] = useState<ReportDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/portal/reports/${id}`);
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(json.error || "Failed to load report");
+          return;
+        }
+        setReport(json.report);
+      } catch {
+        if (!cancelled) setError("Failed to load report");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const questions = asStringList(report?.questions);
+  const notes = asStringList(report?.notes);
+  const checklist = asStringList(report?.checklist);
+
   return (
     <div>
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-outline-variant/40 bg-background/80 px-12 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-outline-variant/40 bg-background/80 px-4 backdrop-blur-md sm:h-16 sm:px-6 lg:px-12">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href="/reports"
-            className="flex items-center gap-2 font-label font-medium text-on-surface-variant hover:text-primary"
+            className="flex shrink-0 items-center gap-2 font-label font-medium text-on-surface-variant hover:text-primary"
           >
             <ArrowLeft size={18} />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Link>
-          <div className="h-4 w-px bg-outline-variant" />
-          <h1 className="text-sm font-bold uppercase tracking-tight text-primary">Report Viewer</h1>
+          <div className="hidden h-4 w-px bg-outline-variant sm:block" />
+          <h1 className="truncate text-sm font-bold uppercase tracking-tight text-primary">
+            Report Viewer
+          </h1>
         </div>
         <button
           type="button"
           onClick={() => window.print()}
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-on-primary shadow-soft"
+          disabled={!report}
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-bold text-on-primary shadow-soft disabled:opacity-60 sm:px-5"
         >
           <Download size={16} />
-          Download PDF
+          <span className="hidden sm:inline">Download PDF</span>
         </button>
       </header>
 
-      <main className="px-12 py-8">
-        <article className="relative mx-auto min-h-[1100px] max-w-[850px] border border-outline-variant/30 bg-white p-16 shadow-soft">
-          <div className="mb-12 flex items-end justify-between border-b-[3px] border-primary pb-8">
-            <div>
-              <p className="mb-2 font-label text-xs font-bold uppercase tracking-widest text-primary">
-                Official Synthesis Report
-              </p>
-              <h2 className="mb-2 font-headline text-5xl leading-none text-on-surface md:text-6xl">
-                Annual IEP Review Analysis
-              </h2>
-              <p className="font-label text-sm italic text-on-surface-variant">
-                Case Reference: {id.toUpperCase()} • Facilitated by SustainBL
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-label font-bold text-on-surface">August 24, 2024</p>
-              <p className="font-label text-xs uppercase tracking-tighter text-on-surface-variant">
-                Issue Date
-              </p>
-            </div>
+      <main className="px-3 py-5 sm:px-6 sm:py-8 lg:px-12">
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 py-24 text-on-surface-variant">
+            <Loader2 className="animate-spin" size={20} />
+            Loading report…
           </div>
-
-          <section className="mb-16">
-            <div className="flex items-start gap-8">
-              <div className="w-1/3">
-                <h3 className="border-l-2 border-primary-container pl-4 font-headline text-2xl italic text-primary">
-                  Executive Summary
-                </h3>
+        ) : error || !report ? (
+          <p className="mx-auto max-w-[850px] rounded-xl border border-tertiary/30 bg-tertiary/5 px-6 py-8 text-sm text-tertiary">
+            {error || "Report not found."}
+          </p>
+        ) : (
+          <article className="relative mx-auto min-h-[1100px] max-w-[850px] border border-outline-variant/30 bg-white p-6 shadow-soft sm:p-10 md:p-16">
+            <div className="mb-8 flex flex-col gap-4 border-b-[3px] border-primary pb-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
+              <div>
+                <p className="mb-2 font-label text-xs font-bold uppercase tracking-widest text-primary">
+                  Official Synthesis Report
+                </p>
+                <h2 className="mb-2 font-headline text-3xl leading-none text-on-surface sm:text-5xl md:text-6xl">
+                  {report.title}
+                </h2>
+                <p className="font-label text-sm italic text-on-surface-variant">
+                  Prepared for {report.clientName}
+                  {report.advisorName ? ` · Facilitated by ${report.advisorName}` : ""}
+                </p>
               </div>
-              <div className="w-2/3">
-                <p className="font-body leading-relaxed text-on-surface first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-5xl first-letter:text-primary">
-                  This document synthesizes the recent IEP meeting regarding student progress and
-                  placement. The primary focus was reconciling developmental benchmarks with
-                  classroom performance and aligning therapeutic supports for the upcoming year.
+              <div className="text-left sm:text-right">
+                <p className="font-label font-bold text-on-surface">
+                  {report.issueDate || "Date pending"}
+                </p>
+                <p className="font-label text-xs uppercase tracking-tighter text-on-surface-variant">
+                  Issue Date
                 </p>
               </div>
             </div>
-          </section>
 
-          <section className="mb-16">
-            <h3 className="mb-8 font-headline text-3xl text-on-surface">Key Outcomes</h3>
-            <div className="grid grid-cols-2 gap-6">
-              {[
-                {
-                  title: "Reading Comprehension",
-                  body: "Achieved 85% mastery identifying main themes, exceeding the 70% target.",
-                },
-                {
-                  title: "Self-Regulation",
-                  body: "Successfully used sensory cool-down zones in 4 of 5 prompted instances.",
-                },
-                {
-                  title: "Social Interaction",
-                  body: "Initiated play with peers in 3 structured activities without immediate adult help.",
-                },
-                {
-                  title: "Written Expression",
-                  body: "Refinement needed in multi-paragraph structure; assistive typing recommended.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="border-l-4 border-primary bg-surface-container-low p-6">
-                  <h4 className="mb-2 font-label font-bold text-on-surface">{item.title}</h4>
-                  <p className="font-body text-sm leading-snug text-on-surface-variant">{item.body}</p>
+            <section className="mb-10 sm:mb-16">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+                <div className="sm:w-1/3">
+                  <h3 className="border-l-2 border-primary-container pl-4 font-headline text-xl italic text-primary sm:text-2xl">
+                    Executive Summary
+                  </h3>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="sm:w-2/3">
+                  {report.summaryMarkdown ? (
+                    <MarkdownContent content={report.summaryMarkdown} />
+                  ) : (
+                    <p className="font-body leading-relaxed text-on-surface-variant">
+                      No summary is available yet for this meeting. Once your meeting is completed
+                      and summarized, the full report will appear here.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
 
-          <footer className="mt-20 flex items-center justify-between border-t border-outline-variant/40 pt-12 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
-            <div>Page 01 of 03</div>
-            <div className="flex items-center gap-2">
-              <BrandLogo href={undefined} size="sm" />
-              <span>Digital IEP Governance Platform</span>
-            </div>
-            <div>ID: #882-XJ99-2024</div>
-          </footer>
-        </article>
+            {questions.length > 0 ? (
+              <section className="mb-10 sm:mb-16">
+                <h3 className="mb-6 font-headline text-2xl text-on-surface sm:mb-8 sm:text-3xl">
+                  Questions Discussed
+                </h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+                  {questions.map((item) => (
+                    <div
+                      key={item}
+                      className="border-l-4 border-primary bg-surface-container-low p-6"
+                    >
+                      <p className="font-body text-sm leading-snug text-on-surface-variant">
+                        {item}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {notes.length > 0 ? (
+              <section className="mb-10 sm:mb-16">
+                <h3 className="mb-6 font-headline text-2xl text-on-surface sm:mb-8 sm:text-3xl">
+                  Notes
+                </h3>
+                <ul className="space-y-3">
+                  {notes.map((item) => (
+                    <li
+                      key={item}
+                      className="rounded-lg border border-outline-variant/30 bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {checklist.length > 0 ? (
+              <section className="mb-10 sm:mb-16">
+                <h3 className="mb-6 font-headline text-2xl text-on-surface sm:mb-8 sm:text-3xl">
+                  Checklist
+                </h3>
+                <ul className="space-y-2">
+                  {checklist.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm text-on-surface-variant">
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            <footer className="mt-12 flex flex-col items-center gap-3 border-t border-outline-variant/40 pt-8 text-center font-label text-[10px] uppercase tracking-widest text-on-surface-variant sm:mt-20 sm:flex-row sm:justify-between sm:pt-12 sm:text-left">
+              <div>SustainBL Report</div>
+              <div className="flex items-center gap-2">
+                <BrandLogo href={undefined} size="sm" />
+                <span>Client Portal</span>
+              </div>
+              <div>ID: {report.id.slice(0, 8).toUpperCase()}</div>
+            </footer>
+          </article>
+        )}
 
         <button
           type="button"
           onClick={() => window.print()}
-          className="fixed bottom-8 right-8 flex h-14 w-14 items-center justify-center rounded-full bg-on-surface text-surface shadow-soft transition-transform hover:scale-110"
+          disabled={!report}
+          className="fixed bottom-5 right-5 flex h-12 w-12 items-center justify-center rounded-full bg-on-surface text-surface shadow-soft transition-transform hover:scale-110 disabled:opacity-50 sm:bottom-8 sm:right-8 sm:h-14 sm:w-14"
           aria-label="Print"
         >
           <Printer size={20} />

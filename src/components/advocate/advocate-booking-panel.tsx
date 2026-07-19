@@ -1,93 +1,237 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { BOOKING_PURPOSES, BOOKING_TIMES, buildPaymentHref } from "@/lib/booking";
-import { mockSessionBalance } from "@/lib/session-policy";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  BOOKING_PURPOSES,
+  BOOKING_TIMES,
+  buildPaymentHref,
+  buildSuccessHref,
+} from "@/lib/booking";
+import type { SessionBalance } from "@/lib/portal/session-grants";
 
-const DAYS = [
-  { d: "26", muted: true },
-  { d: "27", muted: true },
-  { d: "28", muted: true },
-  { d: "29", muted: true },
-  { d: "30", muted: true },
-  { d: "1" },
-  { d: "2" },
-  { d: "3" },
-  { d: "4" },
-  { d: "5" },
-  { d: "6", accent: true },
-  { d: "7" },
-  { d: "8" },
-  { d: "9" },
-  { d: "10" },
-  { d: "11" },
-  { d: "12" },
-  { d: "13" },
-  { d: "14" },
-  { d: "15" },
-  { d: "16" },
-];
+const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
-export function AdvocateBookingPanel() {
-  const router = useRouter();
-  const bal = mockSessionBalance;
-  const [selectedDay, setSelectedDay] = useState("11");
-  const [time, setTime] = useState<string>(BOOKING_TIMES[1]);
-  const [purpose, setPurpose] = useState<string>(BOOKING_PURPOSES[0]);
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
 
-  function onConfirmBook() {
-    router.push(buildPaymentHref({ day: selectedDay, time, purpose }));
+function toYmd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function buildCalendarDays(month: Date) {
+  const first = startOfMonth(month);
+  // Monday-first index: Sun=0 → 6
+  const mondayIndex = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const prevMonthDays = new Date(month.getFullYear(), month.getMonth(), 0).getDate();
+
+  const cells: Array<{ date: Date; ymd: string; muted: boolean; inMonth: boolean }> = [];
+
+  for (let i = mondayIndex - 1; i >= 0; i -= 1) {
+    const day = prevMonthDays - i;
+    const date = new Date(month.getFullYear(), month.getMonth() - 1, day);
+    cells.push({ date, ymd: toYmd(date), muted: true, inMonth: false });
   }
 
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    cells.push({ date, ymd: toYmd(date), muted: false, inMonth: true });
+  }
+
+  while (cells.length % 7 !== 0) {
+    const day = cells.length - (mondayIndex + daysInMonth) + 1;
+    const date = new Date(month.getFullYear(), month.getMonth() + 1, day);
+    cells.push({ date, ymd: toYmd(date), muted: true, inMonth: false });
+  }
+
+  return cells;
+}
+
+type AdvocateBookingPanelProps = {
+  advocateName?: string | null;
+  hasAdvocate: boolean;
+};
+
+export function AdvocateBookingPanel({
+  advocateName,
+  hasAdvocate,
+}: AdvocateBookingPanelProps) {
+  const router = useRouter();
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => toYmd(new Date()));
+  const [time, setTime] = useState<string>(BOOKING_TIMES[1]);
+  const [purpose, setPurpose] = useState<string>(BOOKING_PURPOSES[0]);
+  const [balance, setBalance] = useState<SessionBalance | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cells = useMemo(() => buildCalendarDays(month), [month]);
+  const monthLabel = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingBalance(true);
+      try {
+        const res = await fetch("/api/portal/sessions");
+        const json = await res.json();
+        if (!cancelled) setBalance(json.balance ?? null);
+      } catch {
+        if (!cancelled) setBalance(null);
+      } finally {
+        if (!cancelled) setLoadingBalance(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function onConfirmBook() {
+    if (!hasAdvocate) {
+      setError("You need an assigned advocate before booking.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/portal/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: selectedDate, time, purpose }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Could not book this meeting.");
+        return;
+      }
+
+      if (json.mode === "booked") {
+        if (json.balance) setBalance(json.balance);
+        router.push(
+          buildSuccessHref({
+            date: selectedDate,
+            time,
+            purpose,
+            appointmentId: json.appointmentId,
+            advocateName: json.advocateName || advocateName,
+          }),
+        );
+        return;
+      }
+
+      if (json.mode === "payment_required") {
+        if (json.balance) setBalance(json.balance);
+        router.push(
+          buildPaymentHref({
+            intentId: json.intentId,
+            date: selectedDate,
+            time,
+            purpose,
+          }),
+        );
+      }
+    } catch {
+      setError("Could not book this meeting.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const remaining = balance?.sessionsRemaining ?? 0;
+  const total = balance?.sessionsIncluded ?? 0;
+
   return (
-    <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-low p-8 shadow-soft">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <h2 className="font-headline text-3xl text-on-surface">Book a Meeting</h2>
-        <p className="shrink-0 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
-          {bal.remaining} of {bal.total} sessions left
+    <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-low p-5 shadow-soft sm:p-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div>
+          <h2 className="font-headline text-2xl text-on-surface sm:text-3xl">Book a Meeting</h2>
+          {advocateName ? (
+            <p className="mt-1 text-sm text-on-surface-variant">with {advocateName}</p>
+          ) : null}
+        </div>
+        <p className="shrink-0 self-start rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+          {loadingBalance
+            ? "Loading sessions…"
+            : balance
+              ? `${remaining} of ${total} sessions left`
+              : "No package yet"}
         </p>
       </div>
 
+      {!hasAdvocate ? (
+        <p className="mb-4 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
+          Booking unlocks after your advisor enrolls you and assigns an advocate.
+        </p>
+      ) : null}
+
       <div className="mb-6">
         <div className="mb-4 flex items-center justify-between">
-          <span className="font-bold text-on-surface">September 2024</span>
+          <span className="font-bold text-on-surface">{monthLabel}</span>
           <div className="flex space-x-2">
-            <button type="button" className="rounded-full p-1 hover:bg-surface-variant">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() =>
+                setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+              }
+              className="rounded-full p-1 hover:bg-surface-variant"
+            >
               <ChevronLeft size={18} />
             </button>
-            <button type="button" className="rounded-full p-1 hover:bg-surface-variant">
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() =>
+                setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+              }
+              className="rounded-full p-1 hover:bg-surface-variant"
+            >
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
-        <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs font-bold text-outline">
-          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+        <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-bold text-outline sm:gap-2">
+          {WEEKDAYS.map((d, i) => (
             <div key={`${d}-${i}`}>{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-2 text-center text-sm">
-          {DAYS.map((day, i) => {
-            const selectable = !day.muted;
-            const selected = selectedDay === day.d && selectable;
+        <div className="grid grid-cols-7 gap-1 text-center text-sm sm:gap-2">
+          {cells.map((cell) => {
+            const isPast = cell.date < today;
+            const selectable = cell.inMonth && !isPast;
+            const selected = selectedDate === cell.ymd && selectable;
+            const isToday = toYmd(today) === cell.ymd;
             return (
               <button
-                key={`${day.d}-${i}`}
+                key={cell.ymd}
                 type="button"
                 disabled={!selectable}
-                onClick={() => setSelectedDay(day.d)}
-                className={`p-2 transition-colors ${
+                onClick={() => setSelectedDate(cell.ymd)}
+                className={`p-1.5 transition-colors sm:p-2 ${
                   selected
                     ? "rounded-lg bg-primary font-bold text-on-primary shadow-soft"
-                    : day.accent
+                    : isToday && selectable
                       ? "rounded-lg bg-primary/10 font-bold text-primary"
-                      : day.muted
+                      : !selectable
                         ? "cursor-default text-outline/40"
                         : "rounded-lg hover:bg-surface-variant"
                 }`}
               >
-                {day.d}
+                {cell.date.getDate()}
               </button>
             );
           })}
@@ -137,12 +281,27 @@ export function AdvocateBookingPanel() {
         </div>
       </div>
 
+      {error ? (
+        <p className="mb-4 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
+          {error}
+        </p>
+      ) : null}
+
+      {balance && remaining === 0 ? (
+        <p className="mb-4 text-sm text-on-surface-variant">
+          No sessions left. Confirming will take you to Stripe to purchase an extra session (
+          {balance.extraSessionPriceLabel}).
+        </p>
+      ) : null}
+
       <button
         type="button"
-        onClick={onConfirmBook}
-        className="w-full rounded-xl bg-primary py-4 font-bold text-on-primary shadow-soft transition-all hover:bg-primary-container hover:text-on-primary-container"
+        disabled={submitting || !hasAdvocate || loadingBalance}
+        onClick={() => void onConfirmBook()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold text-on-primary shadow-soft transition-all hover:bg-primary-container hover:text-on-primary-container disabled:opacity-60"
       >
-        Confirm Schedule
+        {submitting ? <Loader2 size={18} className="animate-spin" /> : null}
+        {balance && remaining === 0 ? "Continue to payment" : "Confirm Schedule"}
       </button>
     </div>
   );

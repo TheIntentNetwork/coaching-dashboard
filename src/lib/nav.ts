@@ -8,25 +8,34 @@ export type NavItem = {
   icon: string;
 };
 
-/** Primary sidebar — binder sub-tabs live only under SustainBL */
-export function getSidebarNav(theme: PortalTheme): NavItem[] {
+/** Primary sidebar — SustainBL sub-tabs live only under SustainBL */
+export function getSidebarNav(
+  theme: PortalTheme,
+  options?: { includeSetup?: boolean },
+): NavItem[] {
   const copy = SERVICE_COPY[theme];
+  const includeSetup = options?.includeSetup ?? true;
 
-  return [
-    { id: "setup", label: "Setup", href: "/setup", icon: "settings" },
+  const items: NavItem[] = [];
+  if (includeSetup) {
+    items.push({ id: "setup", label: "Setup", href: "/setup", icon: "settings" });
+  }
+
+  items.push(
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "home" },
     { id: "sustainbl", label: "SustainBL", href: "/sustainbl", icon: "book-open" },
     { id: "meetings", label: "Meetings", href: "/meetings", icon: "mic" },
     { id: "follow-up", label: "Follow-up", href: "/follow-up", icon: "mail" },
     { id: "reports", label: "PDF Export", href: "/reports", icon: "file-text" },
-    { id: "ask-copilot", label: "Ask Copilot", href: "/ask-copilot", icon: "sparkles" },
     {
       id: "my-advocate",
       label: copy.coachNavLabel,
       href: "/advocate",
       icon: "user",
     },
-  ];
+  );
+
+  return items;
 }
 
 /** @deprecated Prefer getSidebarNav(theme) */

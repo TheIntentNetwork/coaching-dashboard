@@ -15,16 +15,16 @@ export function SignInSection() {
   );
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-24">
+    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-24">
       <motion.section
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="order-2 flex flex-col items-start space-y-10 lg:order-1"
+        className="order-2 flex flex-col items-start space-y-8 lg:order-1 lg:space-y-10"
       >
         <header className="space-y-4">
           <BrandLogo href="/sign-in" size="md" priority />
-          <h1 className="font-display text-5xl leading-[1.1] tracking-tight text-on-surface md:text-7xl">
+          <h1 className="font-display text-4xl leading-[1.1] tracking-tight text-on-surface sm:text-5xl md:text-7xl">
             Welcome back
           </h1>
           <p className="max-w-md font-body text-lg text-on-surface-variant">
@@ -115,7 +115,7 @@ export function SignInSection() {
       </motion.section>
 
       <motion.section
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
         className="order-1 lg:order-2"
       >

@@ -1,129 +1,227 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, Save, Send } from "lucide-react";
-import { CHILD_NAME } from "@/lib/nav";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2, Send } from "lucide-react";
+import { useAppSession } from "@/components/auth/session-provider";
+import type { MessageThreadSummary, SecureMessage } from "@/lib/portal/types";
+
+function formatMessageTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function FollowUpSection() {
-  const [copied, setCopied] = useState(false);
+  const { copy } = useAppSession();
+  const noun = copy.coachNoun;
+  const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<SecureMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const body = `Dear IEP Team,
+  const loadThread = useCallback(async (threadId: string) => {
+    const res = await fetch(`/api/portal/messages/${threadId}`);
+    const json = await res.json();
+    if (!res.ok) {
+      setError(json.error || "Failed to load conversation");
+      return;
+    }
+    setMessages(json.messages || []);
+  }, []);
 
-Thank you for the productive meeting earlier today. I appreciated the collaborative spirit as we worked together to refine the support plan for ${CHILD_NAME}.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/portal/messages");
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(json.error || "Failed to load messages");
+          return;
+        }
+        const list: MessageThreadSummary[] = json.threads || [];
+        setThreads(list);
+        if (list.length > 0) {
+          setActiveThreadId(list[0].id);
+          setMessages(list[0].messages || []);
+        }
+      } catch {
+        if (!cancelled) setError("Failed to load messages");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-To ensure we are all on the same page regarding the outcomes of today's discussion, I have summarized my understanding of the key agreements and next steps below:`;
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
 
-  async function copyAll() {
-    await navigator.clipboard.writeText(body);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function sendMessage() {
+    const body = draft.trim();
+    if (!body) return;
+    setSending(true);
+    setError(null);
+    try {
+      const res = activeThreadId
+        ? await fetch(`/api/portal/messages/${activeThreadId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body }),
+          })
+        : await fetch("/api/portal/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body }),
+          });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Failed to send message");
+        return;
+      }
+      setDraft("");
+      const threadId = activeThreadId || (json.thread?.id as string | undefined);
+      if (threadId) {
+        if (!activeThreadId) setActiveThreadId(threadId);
+        await loadThread(threadId);
+      }
+    } catch {
+      setError("Failed to send message");
+    } finally {
+      setSending(false);
+    }
   }
 
+  const activeThread = threads.find((t) => t.id === activeThreadId) || null;
+  const lastMessage = messages[messages.length - 1];
+  const waitingForAdvocate = Boolean(
+    lastMessage && lastMessage.sender_type === "veteran",
+  );
+
   return (
-    <div className="mx-auto max-w-4xl px-12 pb-20 pt-8">
-      <section className="mb-12">
+    <div className="page-pad mx-auto max-w-4xl pb-16 sm:pb-20">
+      <section className="mb-6 sm:mb-10">
         <span className="font-label text-xs font-bold uppercase tracking-widest text-tertiary">
-          Step 5: Follow-Up
+          Follow-Up
         </span>
-        <h1 className="mt-4 font-headline text-5xl leading-tight text-on-background">
-          Closing the Loop
-        </h1>
-        <p className="mt-4 max-w-2xl font-body text-lg leading-relaxed text-on-surface-variant">
-          Clear documentation is your best advocacy tool. We&apos;ve drafted this follow-up email
-          based on today&apos;s meeting notes to ensure every agreement is honored.
+        <h1 className="page-title mt-3 sm:mt-4">Messages</h1>
+        <p className="mt-3 max-w-2xl font-body text-base leading-relaxed text-on-surface-variant sm:mt-4 sm:text-lg">
+          Message your {noun} directly to close the loop after meetings, ask questions, or share
+          updates.
         </p>
       </section>
 
-      <div className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-10 shadow-soft">
-        <div className="mb-10 space-y-4">
-          <div className="flex items-center border-b border-outline-variant/40 pb-4">
-            <span className="w-16 font-label text-sm text-on-surface-variant">To:</span>
-            <input
-              className="flex-1 border-none bg-transparent font-body text-sm text-on-surface outline-none"
-              defaultValue="iep-team@districtschool.edu"
-            />
-          </div>
-          <div className="flex items-center border-b border-outline-variant/40 pb-4">
-            <span className="w-16 font-label text-sm text-on-surface-variant">Cc:</span>
-            <input
-              className="flex-1 border-none bg-transparent font-body text-sm text-on-surface outline-none"
-              defaultValue="advocate@sustainbl.com"
-            />
-          </div>
-          <div className="flex items-center border-b border-outline-variant/40 pb-4">
-            <span className="w-16 font-label text-sm text-on-surface-variant">Subject:</span>
-            <input
-              className="flex-1 border-none bg-transparent font-headline text-lg font-semibold text-primary outline-none"
-              defaultValue={`IEP Meeting Follow-Up: ${CHILD_NAME} — Agreement Summary & Next Steps`}
-            />
-          </div>
+      {error ? (
+        <p className="mb-6 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
+          {error}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <div className="flex items-center gap-3 py-16 text-on-surface-variant">
+          <Loader2 className="animate-spin" size={18} />
+          Loading messages…
         </div>
-
-        <div className="space-y-8 font-body leading-relaxed text-on-surface">
-          <div className="whitespace-pre-wrap">{body}</div>
-
-          <div className="border-b border-outline-variant/40 pb-6">
-            <h3 className="mb-4 font-label text-xs font-bold uppercase tracking-wider text-tertiary">
-              Key Agreements Reached
-            </h3>
-            <ul className="ml-5 list-disc space-y-2">
-              <li>Increase specialized literacy instruction from 60 to 90 minutes per week.</li>
-              <li>Noise-canceling headset approved for independent work periods.</li>
-              <li>Quarterly progress reports will include social-emotional goal data.</li>
-            </ul>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft">
+          <div className="flex items-center justify-between border-b border-outline-variant/30 px-4 py-4 sm:px-6 sm:py-5">
+            <div>
+              <p className="font-headline text-lg text-on-surface sm:text-xl">
+                {activeThread?.advisorName || `Your ${noun.charAt(0).toUpperCase()}${noun.slice(1)}`}
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                {activeThread?.subject || `Message to your ${noun}`}
+              </p>
+            </div>
           </div>
 
-          <div>
-            <h3 className="mb-4 font-label text-xs font-bold uppercase tracking-wider text-tertiary">
-              Next Steps
-            </h3>
-            <ol className="ml-5 list-decimal space-y-2">
-              <li>
-                <strong>District:</strong> Finalize the draft IEP and send for signature by Monday.
-              </li>
-              <li>
-                <strong>Parent:</strong> Confirm schedule for the upcoming transition meeting.
-              </li>
-            </ol>
-          </div>
-
-          <div>
-            <p>
-              If any part of this summary differs from your records, please let me know by Wednesday
-              so we can clarify.
-            </p>
-            <p className="mt-4">Best regards,</p>
-            <p className="font-bold">[Parent Name]</p>
-          </div>
-        </div>
-
-        <div className="mt-12 flex items-center justify-between border-t border-outline-variant/40 pt-8">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 font-label text-sm text-on-surface-variant hover:text-primary"
-            >
-              <Save size={18} />
-              Save Draft
-            </button>
-            <button
-              type="button"
-              onClick={copyAll}
-              className="flex items-center gap-2 font-label text-sm text-on-surface-variant hover:text-primary"
-            >
-              {copied ? <Check size={18} /> : <Copy size={18} />}
-              {copied ? "Copied" : "Copy to Clipboard"}
-            </button>
-          </div>
-          <button
-            type="button"
-            className="flex items-center gap-3 rounded-lg bg-primary px-10 py-4 font-bold text-on-primary transition-all active:scale-95"
+          <div
+            ref={scrollRef}
+            className="max-h-[28rem] space-y-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6"
           >
-            Send Email
-            <Send size={18} />
-          </button>
+            {messages.length === 0 ? (
+              <p className="text-sm italic text-on-surface-variant">
+                No messages yet. Send the first message to your {noun} below.
+              </p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`flex ${m.sender_type === "veteran" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-md sm:px-5 ${
+                      m.sender_type === "veteran"
+                        ? "bg-primary text-on-primary"
+                        : "bg-surface-container text-on-surface"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.message_body}</p>
+                    <p
+                      className={`mt-1 text-[10px] uppercase tracking-wider ${
+                        m.sender_type === "veteran"
+                          ? "text-on-primary/70"
+                          : "text-on-surface-variant/60"
+                      }`}
+                    >
+                      {formatMessageTime(m.sent_at)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {waitingForAdvocate ? (
+            <div className="border-t border-outline-variant/30 bg-surface-container-low px-4 py-3 sm:px-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                Waiting for {noun} response
+              </p>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-3 border-t border-outline-variant/30 px-4 py-4 sm:flex-row sm:items-end sm:px-6 sm:py-5">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void sendMessage();
+                }
+              }}
+              placeholder={`Write a message to your ${noun}…`}
+              rows={2}
+              className="w-full flex-1 resize-none rounded-lg border border-outline-variant/50 bg-transparent px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
+            />
+            <button
+              type="button"
+              disabled={sending || !draft.trim()}
+              onClick={() => void sendMessage()}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60 sm:w-auto"
+            >
+              {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              Send
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

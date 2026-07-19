@@ -1,6 +1,6 @@
 export type ServiceType = "iep" | "coaching" | "vaclaims";
 
-/** Portal theme — VA Claims uses the same auth system; brand UI maps it to coaching. */
+/** Portal theme derived from service type (IEP vs coaching). */
 export type PortalTheme = "iep" | "coaching";
 
 export function resolveServiceType(raw: string | null | undefined): ServiceType {
@@ -11,7 +11,9 @@ export function resolveServiceType(raw: string | null | undefined): ServiceType 
 }
 
 export function resolvePortalTheme(serviceType: ServiceType): PortalTheme {
-  return serviceType === "iep" ? "iep" : "coaching";
+  // Brand portal is IEP or Coaching only. Treat anything else (e.g. vaclaims
+  // leftover profiles) as IEP so nav/copy stay correct for advocacy users.
+  return serviceType === "coaching" ? "coaching" : "iep";
 }
 
 export function isPortalServiceType(value: string): value is PortalTheme {

@@ -1,6 +1,5 @@
 /**
- * Attendance / session rules from Adriana (therapy & coaching).
- * Applied in UI copy for booking, cancel, and session balance.
+ * Attendance / session rules for therapy & coaching packages.
  */
 export const SESSION_POLICY = {
   title: "Session & cancellation policy",
@@ -14,13 +13,3 @@ export const SESSION_POLICY = {
   buyExtraLabel: "Purchase extra session",
   buyExtraNote: "You can buy additional sessions anytime when your balance is low.",
 } as const;
-
-export const mockSessionBalance = {
-  packageLabel: "Coaching — 8 Session Package",
-  total: 8,
-  used: 3,
-  remaining: 5,
-  /** Sessions used due to no-show / late cancel */
-  forfeited: 1,
-  extraPriceLabel: "$197",
-};

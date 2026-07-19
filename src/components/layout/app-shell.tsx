@@ -13,10 +13,10 @@ export function AppShell({
     <SessionProvider session={session}>
       <div
         data-theme={session.theme}
-        className="min-h-screen bg-background text-on-surface"
+        className="min-h-screen overflow-x-hidden bg-background text-on-surface"
       >
         <Sidebar />
-        <main className="ml-64 min-h-screen">{children}</main>
+        <main className="min-h-screen pt-14 lg:ml-64 lg:pt-0">{children}</main>
       </div>
     </SessionProvider>
   );

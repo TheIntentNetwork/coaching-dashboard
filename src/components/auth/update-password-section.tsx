@@ -101,16 +101,16 @@ export function UpdatePasswordSection() {
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-xl"
     >
-      <div className="mb-16 text-center">
-        <h1 className="mb-6 font-headline text-5xl tracking-tight text-on-surface md:text-6xl">
+      <div className="mb-10 text-center sm:mb-16">
+        <h1 className="mb-4 font-headline text-4xl tracking-tight text-on-surface sm:mb-6 sm:text-5xl md:text-6xl">
           New Password
         </h1>
-        <p className="mx-auto max-w-md font-body text-lg leading-relaxed text-on-surface-variant">
+        <p className="mx-auto max-w-md font-body text-base leading-relaxed text-on-surface-variant sm:text-lg">
           Choose a secure password to finish setting up your SustainBL account.
         </p>
       </div>
 
-      <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-8 shadow-soft md:p-12">
+      <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-6 shadow-soft sm:p-8 md:p-12">
         <form className="space-y-10" onSubmit={onSubmit}>
           <PasswordField
             id="new_password"

@@ -192,10 +192,15 @@
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     background: var(--background);
     color: var(--on-surface);
     font-family: var(--font-body);
+    overflow-x: hidden;
   }
 
   ::selection {
@@ -223,5 +228,18 @@
 
   .font-label {
     font-family: var(--font-label);
+  }
+
+  /* Shared page padding for authenticated app views */
+  .page-pad {
+    @apply px-4 py-6 sm:px-6 sm:py-8 lg:px-12 lg:py-10;
+  }
+
+  .page-pad-x {
+    @apply px-4 sm:px-6 lg:px-12;
+  }
+
+  .page-title {
+    @apply font-headline text-3xl leading-tight text-on-surface sm:text-4xl md:text-5xl;
   }
 }

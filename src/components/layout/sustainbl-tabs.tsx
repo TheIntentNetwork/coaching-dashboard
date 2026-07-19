@@ -9,7 +9,7 @@ export function SustainblTabs() {
 
   return (
     <nav
-      className="flex items-center gap-8 border-b border-outline-variant/40"
+      className="-mx-1 flex items-center gap-5 overflow-x-auto px-1 pb-px sm:gap-8"
       aria-label="SustainBL sections"
     >
       {SUSTAINBL_TABS.map((tab) => {
@@ -20,8 +20,8 @@ export function SustainblTabs() {
             href={tab.href}
             className={
               active
-                ? "border-b-2 border-primary pb-3 font-semibold text-primary"
-                : "pb-3 text-on-surface-variant transition-colors hover:text-primary"
+                ? "shrink-0 border-b-2 border-primary pb-3 font-semibold text-primary"
+                : "shrink-0 pb-3 text-on-surface-variant transition-colors hover:text-primary"
             }
           >
             {tab.label}

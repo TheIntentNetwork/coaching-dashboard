@@ -1,8 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { PortalTheme } from "@/lib/auth/service-type";
 
-/** Orange flower mark from sustainable-website */
-const LOGO_SRC = "/imgs/sustainbl-logos/Original.png";
+const LOGO_BY_THEME: Record<PortalTheme, string> = {
+  iep: "/imgs/sustainbl-logos/Orange.png",
+  coaching: "/imgs/sustainbl-logos/Original.png",
+};
 
 type BrandLogoProps = {
   href?: string;
@@ -12,6 +15,9 @@ type BrandLogoProps = {
   /** Optional line under SustainBL (aligned with the wordmark, not under the icon) */
   tagline?: string;
   priority?: boolean;
+  /** IEP uses Orange.png; coaching uses Original.png */
+  theme?: PortalTheme;
+  onClick?: () => void;
 };
 
 const SIZES = {
@@ -33,13 +39,16 @@ export function BrandLogo({
   showWordmark = true,
   tagline,
   priority = false,
+  theme = "coaching",
+  onClick,
 }: BrandLogoProps) {
   const dims = SIZES[size];
+  const logoSrc = LOGO_BY_THEME[theme];
 
   const mark = (
     <span className={`inline-flex items-center gap-3 ${className}`}>
       <Image
-        src={LOGO_SRC}
+        src={logoSrc}
         alt=""
         width={dims.width}
         height={dims.height}
@@ -72,7 +81,12 @@ export function BrandLogo({
   }
 
   return (
-    <Link href={href} className="inline-flex shrink-0" aria-label="SustainBL home">
+    <Link
+      href={href}
+      onClick={onClick}
+      className="inline-flex shrink-0"
+      aria-label="SustainBL home"
+    >
       {mark}
     </Link>
   );

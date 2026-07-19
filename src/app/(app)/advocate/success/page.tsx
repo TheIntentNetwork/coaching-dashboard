@@ -3,7 +3,7 @@ import { AdvocateSuccessScreen } from "@/components/advocate/advocate-success-sc
 
 export default function AdvocateSuccessPage() {
   return (
-    <Suspense fallback={<div className="px-12 py-16 text-on-surface-variant">Loading…</div>}>
+    <Suspense fallback={<div className="page-pad text-on-surface-variant">Loading…</div>}>
       <AdvocateSuccessScreen />
     </Suspense>
   );
