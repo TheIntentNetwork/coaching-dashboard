@@ -1,0 +1,30 @@
+---
+description: Adriana IEP expert requirements — product backlog guidance
+alwaysApply: false
+globs: "**/documents/**,**/advocate/**,**/sustainbl/**,**/TODO.md"
+---
+
+# IEP domain backlog (Adriana feedback)
+
+Federal IDEA core applies across many states; Texas labels (ARD, STAAR, MDARD) may appear in copy when relevant.
+
+## Parent evidence (extend Documents — do not invent a second vault)
+
+Categories to support: medical/doctor; PT/OT/speech; accommodations proof; disciplinary records; attendance; grades; teacher/para/staff anecdotal notes; district app screenshots (ClassDojo, Remind, etc.).
+
+## Product surfaces still missing
+
+1. **Accommodations & supportive services** — structured area + linked proof
+2. **Compensatory service plans** — tab for missed/back-tracked services (urgent for launch context)
+3. **Advisor knowledge** (sustainable-website): 13 IDEA eligibility categories + short process guide (Child Find → consent → PWN → eval timelines → initial ARD → annual / 3-yr reeval; review ARD; MDARD; FBA)
+
+## Already covered elsewhere
+
+- Uploads: SustainBL Documents (generic today)
+- Remote meetings: Stream / SustainBL Copilot (not Zoom-required)
+- Recording: copilot stack
+- Booking/sessions/Stripe: `/advocate` flow
+
+## Process note
+
+Do not build a full Child Find legal workflow engine for MVP. Prefer document categories + compensatory plans + coach reference content first. See `TODO.md` section D.

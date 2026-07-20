@@ -1,0 +1,42 @@
+---
+description: IEP/Coaching brand portal architecture and sustainable-website connections
+alwaysApply: true
+---
+
+# Brand portal (IEP / Coaching)
+
+This repo is the **client portal** for IEP and Coaching only. VA Claims stays on `sustainable-website`.
+
+## Sibling apps
+
+| App | Path | Role | Local port |
+|-----|------|------|------------|
+| Brand portal | this repo (`brand`) | Parent/client UI | **3001** |
+| Sustainable website | `../sustainable-website` | Marketing, funnels, advisor/admin, VA Claims clients, enrollment | **3000** |
+| SustainBL Copilot | `../sustainbl-copilot` | In-meeting AI package | — |
+
+## Shared infrastructure
+
+- **Supabase project_id**: `cgghmctyygkqzalfhqsx` (same DB/auth for both apps)
+- Use Supabase MCP `execute_sql` for schema/data; do not invent another project
+- Stripe keys are shared conceptually; brand handles `portal_session_booking` checkout/webhook for extra sessions
+- Enrollment + advisor assignment happen in **sustainable-website**; brand reads `advisor_enrollments`, `appointments`, `profiles`
+
+## Routing contract
+
+- IEP/Coaching password/setup links → `CLIENT_PORTAL_URL` / `NEXT_PUBLIC_CLIENT_PORTAL_URL` (brand)
+- Implemented in sustainable-website: `src/lib/auth/client-portal-url.ts`, `generateClientSetupLink`
+- VA Claims → main SustainBL site URL only
+
+## Scope rules
+
+- Do **not** rebuild IEP/Coaching dashboards inside sustainable-website
+- Advisor review, enrollment, Stripe catalog, messaging from coach → sustainable-website
+- Parent journey UI → brand
+- Track done/left in `TODO.md`; deferred RAG in `README.md`
+- Embeddings: EC2 Ollama via `OLLAMA_EMBED_BASE_URL` + `nomic-embed-text`; chat stays on `OLLAMA_BASE_URL` (cloud)
+
+## Theme
+
+- `service_type` coaching → warm accents, “My Coach”
+- Anything else in this portal → IEP theme, “My Advocate”

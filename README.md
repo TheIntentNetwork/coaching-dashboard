@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SustainBL Brand Frontend
 
-## Getting Started
+IEP / Coaching client portal (Next.js). Shares Supabase auth and data with `sustainable-website`.
 
-First, run the development server:
+**Status tracker:** see [`TODO.md`](./TODO.md) for done vs left (including Adriana IEP expert backlog).  
+**Agent rules:** `.cursor/rules/` + [`AGENTS.md`](./AGENTS.md).
+
+## Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Default local port is **3001** (see `.env` / `PORT`). Open [http://localhost:3001](http://localhost:3001).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.example` → `.env` and fill Supabase + Stripe keys (same project as sustainable-website).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### AI env (chat + embeddings)
 
-## Learn More
+| Variable | Purpose |
+|----------|---------|
+| `OLLAMA_BASE_URL` | Chat (Ollama Cloud), e.g. `https://ollama.com/v1` |
+| `OLLAMA_API_KEY` | Chat API key |
+| `COPILOT_CHAT_MODEL` | e.g. `glm-5.2` |
+| `OLLAMA_EMBED_BASE_URL` | Embeddings host (EC2 Ollama), e.g. `http://54.x.x.x:11434/v1` |
+| `COPILOT_EMBED_PROVIDER` | `ollama` |
+| `COPILOT_EMBED_MODEL` | `nomic-embed-text` (768-d, matches pgvector) |
 
-To learn more about Next.js, take a look at the following resources:
+On document upload: extract → chunk → embed → `portal_document_chunks`.  
+Ask Copilot retrieves via `match_portal_chunks` and grounds answers in those excerpts.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Path | Screen |
+|------|--------|
+| `/sign-in` | Sign in |
+| `/forgot-password` | Forgot password |
+| `/update-password` | Update password |
+| `/setup` | Onboarding step 1 — welcome |
+| `/setup/milestone` | Onboarding step 2 — meeting |
+| `/setup/documentation` | Onboarding step 3 — upload |
+| `/dashboard` | Home |
+| `/case-file/*` | Case file workspace (Documents, Prep, IEP tabs). Old `/sustainbl/*` redirects here. |
+| `/meetings` | Meetings |
+| `/meetings/[id]` | Meeting detail |
+| `/follow-up` | Messages with assigned advocate/coach |
+| `/reports` | Family PDF list |
+| `/reports/[id]` | PDF preview |
+| `/ask-copilot` | Ask Copilot (document RAG) |
+| `/advocate` | Advocate profile & booking (+ Stripe extra sessions) |
+| `/settings` | Settings |
 
-## Deploy on Vercel
+## Design notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- SustainBL workspace holds Timeline / Documents / Prep
+- Brand colors and fonts (`EB Garamond`, `Manrope`) live in CSS variables (`src/app/globals.css`)
+- Embeddings run on **AWS EC2** Ollama; chat stays on Ollama Cloud unless you change `OLLAMA_BASE_URL`
