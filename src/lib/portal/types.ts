@@ -103,6 +103,14 @@ export type PortalIepProfile = {
   schoolDistrict: string | null;
   currentIepStatus: string | null;
   primaryDisability: string | null;
+  secondaryDisabilities: string | null;
+  currentChallenges: string | null;
+  iepGoals: string | null;
+  servicesReceived: string | null;
+  accommodationsNeeded: string | null;
+  behavioralConcerns: string | null;
+  parentConcerns: string | null;
+  additionalInfo: string | null;
 };
 
 export type PortalDashboardResponse = {

@@ -174,10 +174,36 @@ export function SettingsSection() {
                 {dashboardData?.iepProfile?.currentIepStatus || "Not set"}
               </p>
             </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                Primary disability
+              </p>
+              <p className="mt-1 text-base font-medium text-on-surface">
+                {dashboardData?.iepProfile?.primaryDisability || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                Current services
+              </p>
+              <p className="mt-1 text-base font-medium text-on-surface">
+                {dashboardData?.iepProfile?.servicesReceived || "Not set"}
+              </p>
+            </div>
           </div>
+          {dashboardData?.iepProfile?.accommodationsNeeded ? (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                Accommodations from intake
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
+                {dashboardData.iepProfile.accommodationsNeeded}
+              </p>
+            </div>
+          ) : null}
           <p className="mt-3 text-xs text-on-surface-variant">
             Parent account details below are for login and communication. Student fields come
-            from your IEP intake and setup.
+            from your IEP intake and are also used to seed Accommodations and Prep.
           </p>
         </div>
 

@@ -51,7 +51,7 @@ Use this as a browser test script.
 - `intake_answers` JSON contains full raw intake payload.
 - `portal_setup.student_name` is seeded with `child_name` if setup name was empty.
 
-## Test 3: Client dashboard identity split
+## Test 3: Client dashboard identity split + student overview
 
 **Page:** `http://localhost:3001/dashboard`
 
@@ -59,6 +59,7 @@ Use this as a browser test script.
 
 1. Log in as the enrolled IEP client (parent account).
 2. Open dashboard header.
+3. Inspect the **Student overview** card below the hero.
 
 ### Expected
 
@@ -67,6 +68,8 @@ Use this as a browser test script.
   - `Student: <child name>`
 - Student details may include grade and district when available.
 - Student identity is not replaced by parent profile name.
+- Student overview shows intake basics (status, disability, services) and narrative fields (challenges, goals, accommodations, parent concerns) when synced.
+- Link **Review accommodations** goes to `/case-file/accommodations`.
 
 ## Test 4: Setup page uses student identity
 
@@ -133,9 +136,28 @@ Use this as a browser test script.
 - Tab shows:
   - Parent contact section
   - Student profile section
+  - Meeting context section (challenges, goals, accommodations, services, concerns)
   - Raw intake answers section
 - Values are populated from `portal_iep_profiles` + `intake_answers`.
 - `Synced from intake` timestamp is present when sync completed.
+
+## Test 7b: Accommodations + Prep seeded from survey
+
+**Pages:**
+- Client: `http://localhost:3001/case-file/accommodations`
+- Client: `http://localhost:3001/case-file/prep`
+
+### Steps
+
+1. After a fresh IEP enrollment (new client), open Accommodations.
+2. Open Prep.
+
+### Expected
+
+- Accommodations has a draft item titled `Accommodations from intake` (description = survey text).
+- If services were selected (not "No services"), also see `Current services from intake`.
+- Prep has intake-seeded notes such as school challenges, IEP goals, parent concerns (template keys `intake_*`).
+- Re-running sync later does not duplicate those seeded rows.
 
 ## Test 8: Non-IEP clients are unaffected
 

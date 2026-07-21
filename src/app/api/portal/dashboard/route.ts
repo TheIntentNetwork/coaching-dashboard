@@ -31,7 +31,7 @@ export async function GET() {
   const { data: iepProfile } = await supabase
     .from("portal_iep_profiles")
     .select(
-      "child_name, child_age, grade_level, school_district, current_iep_status, primary_disability",
+      "child_name, child_age, grade_level, school_district, current_iep_status, primary_disability, secondary_disabilities, current_challenges, iep_goals, services_received, accommodations_needed, behavioral_concerns, parent_concerns, additional_info",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -139,6 +139,14 @@ export async function GET() {
           schoolDistrict: iepProfile.school_district ?? null,
           currentIepStatus: iepProfile.current_iep_status ?? null,
           primaryDisability: iepProfile.primary_disability ?? null,
+          secondaryDisabilities: iepProfile.secondary_disabilities ?? null,
+          currentChallenges: iepProfile.current_challenges ?? null,
+          iepGoals: iepProfile.iep_goals ?? null,
+          servicesReceived: iepProfile.services_received ?? null,
+          accommodationsNeeded: iepProfile.accommodations_needed ?? null,
+          behavioralConcerns: iepProfile.behavioral_concerns ?? null,
+          parentConcerns: iepProfile.parent_concerns ?? null,
+          additionalInfo: iepProfile.additional_info ?? null,
         }
       : null,
     caseProgress: {
