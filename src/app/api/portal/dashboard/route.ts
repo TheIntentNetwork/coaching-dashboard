@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/portal/server/auth";
 import { resolvePortalTheme, resolveServiceType } from "@/lib/auth/service-type";
 import {
@@ -7,6 +8,8 @@ import {
   formatMeetingDateLabel,
   getMeetingType,
 } from "@/lib/portal/meeting-types";
+import { parseThirdPartyMeeting } from "@/lib/portal/third-party-meeting";
+import { resolveMeetingLink } from "@/lib/portal/meeting-link";
 
 export async function GET() {
   const supabase = await createClient();
@@ -102,6 +105,77 @@ export async function GET() {
   const dueLabel = formatDueLabel(setup?.meeting_date);
   const hasMeeting = Boolean(setup?.meeting_date);
 
+  let thirdPartyJoinUrl: string | null = null;
+  let thirdPartyLabel: "zoom" | "meet" | "other" | null = null;
+  let appointmentStartsAt: string | null = null;
+  let resolvedAppointmentId: string | null = null;
+  let copilotJoinUrl: string | null = null;
+  try {
+    const admin = createAdminClient();
+    const appointmentId =
+      typeof setup?.appointment_id === "string" ? setup.appointment_id : null;
+
+    const applyAppointmentJoin = (
+      row: {
+        id?: string;
+        extra_data?: unknown;
+        start_time?: string;
+        meeting_link?: string | null;
+        meeting_token?: string | null;
+      } | null,
+    ) => {
+      if (!row) return;
+      if (typeof row.id === "string") resolvedAppointmentId = row.id;
+      if (typeof row.start_time === "string") appointmentStartsAt = row.start_time;
+      const parsed = parseThirdPartyMeeting(row.extra_data);
+      if (parsed) {
+        thirdPartyJoinUrl = parsed.url;
+        thirdPartyLabel = parsed.label;
+      }
+      const copilot = resolveMeetingLink({
+        appointmentId: String(row.id || resolvedAppointmentId || appointmentId || ""),
+        meetingLink: row.meeting_link,
+        meetingToken: row.meeting_token,
+      });
+      if (copilot) copilotJoinUrl = copilot;
+    };
+
+    if (appointmentId) {
+      const { data: appt } = await admin
+        .from("appointments")
+        .select("id, extra_data, start_time, meeting_link, meeting_token")
+        .eq("id", appointmentId)
+        .maybeSingle();
+      applyAppointmentJoin(appt);
+    }
+
+    if (!thirdPartyJoinUrl || !copilotJoinUrl) {
+      const { data: nextAppt } = await admin
+        .from("appointments")
+        .select("id, extra_data, start_time, meeting_link, meeting_token")
+        .eq("veteran_user_id", user.id)
+        .eq("status", "scheduled")
+        .gte("start_time", new Date().toISOString())
+        .order("start_time", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (nextAppt) {
+        if (!thirdPartyJoinUrl) {
+          const parsed = parseThirdPartyMeeting(nextAppt.extra_data);
+          if (parsed) {
+            thirdPartyJoinUrl = parsed.url;
+            thirdPartyLabel = parsed.label;
+          }
+        }
+        if (!copilotJoinUrl || !resolvedAppointmentId) {
+          applyAppointmentJoin(nextAppt);
+        }
+      }
+    }
+  } catch (thirdPartyError) {
+    console.error("[portal/dashboard] meeting join lookup failed:", thirdPartyError);
+  }
+
   const priority = hasMeeting
     ? {
         title: meetingType ? `Prepare for your ${meetingType.shortTitle}` : "Prepare for your meeting",
@@ -111,15 +185,35 @@ export async function GET() {
       }
     : null;
 
+  const fallbackMeetingDate = (appointmentStartsAt ?? new Date().toISOString()).slice(0, 10);
+
   const upcomingMeeting = hasMeeting
     ? {
         meetingDate: setup!.meeting_date,
+        startsAt: appointmentStartsAt,
         dateLabel: formatMeetingDateLabel(setup!.meeting_date),
         meetingType: meetingType?.label ?? setup!.meeting_type,
         focus: meetingType?.prepFocus ?? null,
         studentName: setup?.student_name ?? null,
+        appointmentId: resolvedAppointmentId,
+        copilotJoinUrl,
+        thirdPartyJoinUrl,
+        thirdPartyLabel,
       }
-    : "still_not_set";
+    : thirdPartyJoinUrl || copilotJoinUrl
+      ? {
+          meetingDate: fallbackMeetingDate,
+          startsAt: appointmentStartsAt,
+          dateLabel: "Scheduled",
+          meetingType: "Meeting",
+          focus: null,
+          studentName: setup?.student_name ?? null,
+          appointmentId: resolvedAppointmentId,
+          copilotJoinUrl,
+          thirdPartyJoinUrl,
+          thirdPartyLabel,
+        }
+      : "still_not_set";
 
   const latestTimelineTitle = timelineRes.data?.[0]?.title || null;
 

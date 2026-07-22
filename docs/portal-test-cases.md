@@ -1,6 +1,6 @@
 # Portal test cases — full flow tracker
 
-Use this while testing **brand** (`:3001`) and **advisor** (`sustainable-website` `:3000`).  
+Use this while testing **iep-user-dashboard** (`:3001`) and **advisor** (`sustainable-website` `:3000`).  
 Check boxes as you go. Note bugs under each section.
 
 Last updated: 2026-07-20

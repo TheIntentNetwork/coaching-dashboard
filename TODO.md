@@ -1,7 +1,7 @@
 # IEP / Coaching Portal — Status Tracker
 
 Last updated: 2026-07-20  
-Source apps: **`brand`** (this repo) + **`../sustainable-website`** (advisor/enrollment/VA)  
+Source apps: **`iep-user-dashboard`** (this repo) + **`../sustainable-website`** (advisor/enrollment/VA)  
 Shared DB: Supabase `cgghmctyygkqzalfhqsx`
 
 Update checkboxes as work lands. Do not delete completed items — mark them done so history stays visible.
@@ -16,13 +16,13 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 
 ---
 
-## A. Done — Client portal (`brand`)
+## A. Done — Client portal (`iep-user-dashboard`)
 
 ### Auth & account
 - [x] Sign-in / create account / forgot + update password
 - [x] Supabase session persistence + middleware
 - [x] IEP vs Coaching theme/copy (`My Advocate` / `My Coach`)
-- [x] Enrollment password setup emails redirect IEP/Coaching → brand portal (`CLIENT_PORTAL_URL`); VA Claims stays on sustainable-website
+- [x] Enrollment password setup emails redirect IEP/Coaching → IEP user dashboard (`CLIENT_PORTAL_URL`); VA Claims stays on sustainable-website
 
 ### Setup / onboarding
 - [x] Welcome step (display name, not editable input)
@@ -71,7 +71,7 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 - [x] Host saves portal summary on leave
 - [x] Guest/user saves portal summary on leave (token-auth API)
 - [x] Transcript persisted to `appointments.transcript_text` when available
-- [x] Post-call redirect to brand `/meetings` for IEP/Coaching clients
+- [x] Post-call redirect to portal `/meetings` for IEP/Coaching clients
 - [x] One post-session LLM completion → family (`role=user`) summary on host hang-up
 - [x] Family summary shown on meeting detail, Reports, and advocate profile past meetings
 - [x] Appointment marked `completed` when host ends session
@@ -82,7 +82,7 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 
 - [x] Advisor-assisted enrollment + Stripe products/prices
 - [x] Session grants on enrollment (`sessions_included`, extra session price)
-- [x] Client setup link routing by service type (IEP/Coaching → brand)
+- [x] Client setup link routing by service type (IEP/Coaching → portal)
 - [x] Advisor messaging → client notification email (respects prefs)
 - [x] Portal setup review path for advisors (approve / request changes / under review)
 - [x] My Users detail: documents by category, accommodations, compensatory status, journey (D1–D3, D6)
@@ -140,7 +140,7 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 ## E. Hardening / ops (keep green for launch)
 
 - [x] Code path uses `CLIENT_PORTAL_URL` / `NEXT_PUBLIC_CLIENT_PORTAL_URL` — **set prod values + Supabase redirect allowlist on deploy**
-- [x] Brand Stripe webhook handles `portal_session_booking` (`brand/src/app/api/stripe/webhook/route.ts`) — **point live Stripe endpoint at brand webhook URL**
+- [x] Brand Stripe webhook handles `portal_session_booking` (`iep-user-dashboard/src/app/api/stripe/webhook/route.ts`) — **point live Stripe endpoint at portal webhook URL**
 - [x] Backfill script: `sustainable-website/scripts/backfill-iep-coaching-sessions.ts` (DB currently has grants; re-run if needed)
 - [x] E2E QA checklist below (run on staging/prod before launch)
 - [ ] Lock down EC2 Ollama embeddings (separate infra ticket)
@@ -161,7 +161,7 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 | Remote video meeting | Yes |
 | Meeting recording | Yes (copilot); copy in portal |
 | Document-grounded Ask Copilot | Yes |
-| Join meeting from brand portal | Yes |
+| Join meeting from IEP user dashboard | Yes |
 | Post-call summary in Reports / meeting detail | Yes |
 | Process journey checklist | Yes — D6 |
 
@@ -169,9 +169,9 @@ Update checkboxes as work lands. Do not delete completed items — mark them don
 
 ## UI test checklist (Adriana + Track A)
 
-Prereqs: brand on `:3001`, sustainable-website on `:3000`, `NEXT_PUBLIC_MEETING_BASE_URL=http://localhost:3000`, enrolled IEP user with assigned advocate + availability slots.
+Prereqs: portal on `:3001`, sustainable-website on `:3000`, `NEXT_PUBLIC_MEETING_BASE_URL=http://localhost:3000`, enrolled IEP user with assigned advocate + availability slots.
 
-1. **Login** to brand as IEP client — dashboard loads with your name.
+1. **Login** to portal as IEP client — dashboard loads with your name.
 2. **Set Schedule** (if not done) — pick available slot + meeting type (incl. Review ARD / MDARD) + PDF draft → success.
 3. **Documents** — upload medical PDF + ClassDojo screenshot (image); filter by category.
 4. **Accommodations** — add item, link proof doc, see it on advisor My Users.
@@ -185,4 +185,4 @@ Prereqs: brand on `:3001`, sustainable-website on `:3000`, `NEXT_PUBLIC_MEETING_
 12. **Reports / meeting detail / advocate profile** — family summary appears.
 13. **Advisor → IEP Knowledge** — IDEA categories + process guide load.
 14. **Regression** — Coaching theme: no Accommodations/Compensatory/Journey tabs.
-15. **Ops** — confirm prod `CLIENT_PORTAL_URL`, Stripe live webhook for brand `portal_session_booking`.
+15. **Ops** — confirm prod `CLIENT_PORTAL_URL`, Stripe live webhook for portal `portal_session_booking`.

@@ -1,0 +1,22 @@
+---
+description: Shared intake/survey data model for IEP, Coaching, and VA Claims
+alwaysApply: true
+---
+
+# Three services — shared intake data model
+
+Same Supabase project (`cgghmctyygkqzalfhqsx`) for iep-user-dashboard and sustainable-website.
+
+## Survey source of truth
+
+**`lead_magnets.metadata.intake_answers`** — not a separate survey table.
+
+- Join to appointments by email (`metadata.email` / `intake_answers.contact_email`)
+- IEP portal dashboards may also read **`portal_iep_profiles`** after enrollment — that is profile overlay, not the intake questionnaire store
+
+## Do not
+
+- Create service-specific duplicate tables for intake answers
+- Assume IEP-only schema when building generic dashboard APIs
+
+Full conventions: `../sustainable-website/.cursor/rules/shared-intake-data-model.mdc`

@@ -7,6 +7,7 @@ import { useAppSession } from "@/components/auth/session-provider";
 import { PageHeader } from "@/components/layout/page-shell";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import type { PortalPrepItem } from "@/lib/portal/types";
+import { PrepHelpHint } from "@/components/sustainbl/prep-help-hint";
 import { PrepItemList } from "@/components/sustainbl/prep-item-list";
 import { PrepChecklist } from "@/components/sustainbl/prep-checklist";
 import { PrepTemplatePicker } from "@/components/sustainbl/prep-template-picker";
@@ -88,7 +89,12 @@ export function PrepSection() {
       <PageHeader
         title={<>{studentName}&apos;s preparation</>}
         description="Curate your thoughts and essential questions before the upcoming IEP review meeting."
-        actions={<PrepTemplatePicker onApply={applyTemplate} busy={busy} />}
+        actions={
+          <div className="flex items-center gap-2 sm:gap-3">
+            <PrepHelpHint />
+            <PrepTemplatePicker onApply={applyTemplate} busy={busy} />
+          </div>
+        }
       />
 
       {error ? (

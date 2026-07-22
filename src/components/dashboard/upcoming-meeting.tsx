@@ -2,6 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import { CoverImage } from "@/components/ui/cover-image";
+import { MeetingCountdown } from "@/components/dashboard/meeting-countdown";
+import { MeetingJoinActions } from "@/components/meetings/meeting-join-actions";
 import { IMAGES } from "@/lib/images";
 import { useDashboardData } from "@/lib/portal/client/use-dashboard-data";
 
@@ -9,6 +11,9 @@ export function UpcomingMeeting() {
   const { data, loading, error } = useDashboardData();
   const upcoming = data?.upcomingMeeting;
   const meeting = upcoming && upcoming !== "still_not_set" ? upcoming : null;
+  const meetingDetailHref = meeting?.appointmentId
+    ? `/meetings/${meeting.appointmentId}`
+    : null;
 
   return (
     <section className="py-2">
@@ -30,20 +35,36 @@ export function UpcomingMeeting() {
           <p className="text-sm text-tertiary">{error}</p>
         ) : meeting ? (
           <>
-            <div className="space-y-1.5">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                <h3 className="font-headline text-xl text-on-surface sm:text-2xl">
-                  {meeting.meetingType || "Meeting"}
-                </h3>
-                <span className="shrink-0 text-sm font-bold text-primary">{meeting.dateLabel}</span>
-              </div>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <h3 className="font-headline text-xl text-on-surface sm:text-2xl">
+                {meeting.meetingType || "Meeting"}
+              </h3>
+              <MeetingCountdown
+                startsAt={meeting.startsAt}
+                date={meeting.meetingDate}
+                time={data?.setup?.meeting_time}
+                className="justify-self-center text-center"
+              />
+              <span className="justify-self-end text-sm font-bold text-primary">
+                {meeting.dateLabel}
+              </span>
             </div>
             {meeting.focus ? (
               <p className="text-sm italic leading-relaxed text-on-surface-variant">{meeting.focus}</p>
             ) : null}
-            <p className="text-xs text-on-surface-variant">
-              Remote video meeting · recording may be available after the session.
-            </p>
+            <div className="rounded-lg border border-outline-variant/30 bg-surface-container-low px-4 py-3">
+              <MeetingJoinActions
+                copilotJoinUrl={meeting.copilotJoinUrl}
+                thirdPartyJoinUrl={meeting.thirdPartyJoinUrl}
+                thirdPartyLabel={meeting.thirdPartyLabel}
+                meetingDetailHref={meetingDetailHref}
+                layout="row"
+                size="sm"
+              />
+              <p className="mt-2 text-xs text-on-surface-variant">
+                Choose SustainBL Copilot or your advocate&apos;s Zoom/Meet link.
+              </p>
+            </div>
           </>
         ) : (
           <div className="space-y-1.5">

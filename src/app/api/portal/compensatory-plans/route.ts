@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
 
-  const status = body.submit ? "submitted" : "draft";
+  const status = "submitted";
 
   const { data, error } = await supabase
     .from("portal_compensatory_plans")
@@ -62,13 +62,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (status === "submitted") {
-    await insertTimelineEvent(supabase, auth.user.id, {
-      eventType: "compensatory_submitted",
-      title: "Compensatory plan submitted",
-      body: title,
-    });
-  }
+  await insertTimelineEvent(supabase, auth.user.id, {
+    eventType: "compensatory_submitted",
+    title: "Compensatory plan added",
+    body: title,
+  });
 
   return NextResponse.json({ item: data }, { status: 201 });
 }

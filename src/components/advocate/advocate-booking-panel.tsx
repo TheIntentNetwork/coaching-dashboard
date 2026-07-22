@@ -1,61 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { AvailabilityDateTimePicker } from "@/components/booking/availability-datetime-picker";
+import { ScheduledMeetingNotice } from "@/components/booking/scheduled-meeting-notice";
 import {
   BOOKING_PURPOSES,
   buildPaymentHref,
   buildSuccessHref,
   sanitizeReturnTo,
 } from "@/lib/booking";
+import { useUpcomingScheduledMeeting } from "@/lib/portal/client/use-upcoming-scheduled-meeting";
 import type { SessionBalance } from "@/lib/portal/session-grants";
 import {
   useAvailabilityQuery,
   useBookingMutation,
   useSessionsQuery,
 } from "@/lib/portal/query/hooks/use-advocate";
-
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
-
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
-function toYmd(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function buildCalendarDays(month: Date) {
-  const first = startOfMonth(month);
-  const mondayIndex = (first.getDay() + 6) % 7;
-  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const prevMonthDays = new Date(month.getFullYear(), month.getMonth(), 0).getDate();
-
-  const cells: Array<{ date: Date; ymd: string; muted: boolean; inMonth: boolean }> = [];
-
-  for (let i = mondayIndex - 1; i >= 0; i -= 1) {
-    const day = prevMonthDays - i;
-    const date = new Date(month.getFullYear(), month.getMonth() - 1, day);
-    cells.push({ date, ymd: toYmd(date), muted: true, inMonth: false });
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(month.getFullYear(), month.getMonth(), day);
-    cells.push({ date, ymd: toYmd(date), muted: false, inMonth: true });
-  }
-
-  while (cells.length % 7 !== 0) {
-    const day = cells.length - (mondayIndex + daysInMonth) + 1;
-    const date = new Date(month.getFullYear(), month.getMonth() + 1, day);
-    cells.push({ date, ymd: toYmd(date), muted: true, inMonth: false });
-  }
-
-  return cells;
-}
 
 type AdvocateBookingPanelProps = {
   advocateName?: string | null;
@@ -74,81 +36,76 @@ export function AdvocateBookingPanel({
 }: AdvocateBookingPanelProps) {
   const router = useRouter();
   const safeReturnTo = sanitizeReturnTo(returnTo);
-  const today = useMemo(() => {
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return t;
-  }, []);
 
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => toYmd(new Date()));
-  const [time, setTime] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [time, setTime] = useState("");
   const [purpose, setPurpose] = useState<string>(BOOKING_PURPOSES[0]);
   const [attendRemotely, setAttendRemotely] = useState(true);
   const [customPurpose, setCustomPurpose] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [initializedSlots, setInitializedSlots] = useState(false);
+  const [proceedWithExistingMeeting, setProceedWithExistingMeeting] = useState(false);
+
+  const upcomingMeeting = useUpcomingScheduledMeeting();
 
   const sessionsQuery = useSessionsQuery();
   const availabilityQuery = useAvailabilityQuery();
   const bookingMutation = useBookingMutation();
 
   const balance = (sessionsQuery.data?.balance ?? null) as SessionBalance | null;
-  const availableByDate = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const day of availabilityQuery.data?.days || []) {
-      if (day.date && Array.isArray(day.times) && day.times.length > 0) {
-        map[day.date] = day.times;
-      }
-    }
-    return map;
-  }, [availabilityQuery.data?.days]);
+  const days = availabilityQuery.data?.days || [];
 
   const loadingSlots =
     (sessionsQuery.isPending && !sessionsQuery.data) ||
     (availabilityQuery.isPending && !availabilityQuery.data);
   const submitting = bookingMutation.isPending;
 
-  const cells = useMemo(() => buildCalendarDays(month), [month]);
-  const monthLabel = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const availableTimes = availableByDate[selectedDate] || [];
-  const timeOptions = availableTimes;
   const isOther = purpose === "Other";
   const resolvedPurpose = isOther ? customPurpose.trim() : purpose;
   const canBook =
-    !loadingSlots && hasAdvocate && Boolean(selectedDate) && Boolean(time) && timeOptions.length > 0;
+    !loadingSlots &&
+    hasAdvocate &&
+    Boolean(selectedDate) &&
+    Boolean(time) &&
+    days.length > 0 &&
+    (!upcomingMeeting || proceedWithExistingMeeting);
+
+  useEffect(() => {
+    setProceedWithExistingMeeting(false);
+  }, [upcomingMeeting?.startsAt.getTime(), upcomingMeeting?.title]);
 
   useEffect(() => {
     if (initializedSlots || loadingSlots) return;
-    const firstDate = Object.keys(availableByDate).sort()[0];
-    if (firstDate) {
-      const [y, m] = firstDate.split("-").map(Number);
-      setMonth(startOfMonth(new Date(y, m - 1, 1)));
-      setSelectedDate(firstDate);
-      setTime(availableByDate[firstDate][0] || "");
+    const firstDay = days.find((d) => d.times.length > 0);
+    if (firstDay) {
+      setSelectedDate(firstDay.date);
+      setTime(firstDay.times[0] || "");
     } else {
+      setSelectedDate("");
       setTime("");
     }
     setInitializedSlots(true);
-  }, [availableByDate, initializedSlots, loadingSlots]);
+  }, [days, initializedSlots, loadingSlots]);
 
   useEffect(() => {
-    if (loadingSlots) return;
+    if (loadingSlots || !selectedDate) return;
+    const day = days.find((d) => d.date === selectedDate);
+    const availableTimes = day?.times || [];
     if (availableTimes.length === 0) {
       if (time) setTime("");
       return;
     }
-    if (!availableTimes.includes(time)) {
-      setTime(availableTimes[0]);
+    if (time && !availableTimes.includes(time)) {
+      setTime("");
     }
-  }, [selectedDate, availableTimes, time, loadingSlots]);
+  }, [days, loadingSlots, selectedDate, time]);
 
   async function onConfirmBook() {
     if (!hasAdvocate) {
       setError("You need an assigned advocate before booking.");
       return;
     }
-    if (loadingSlots || !time || timeOptions.length === 0) {
+    if (loadingSlots || !time || !selectedDate) {
       setError("Please wait for available times to load, then choose a slot.");
       return;
     }
@@ -198,99 +155,9 @@ export function AdvocateBookingPanel({
   const remaining = balance?.sessionsRemaining ?? 0;
   const total = balance?.sessionsIncluded ?? 0;
 
-  const calendarBlock = (
-    <div className={layout === "split" ? "" : "mb-6"}>
-      <div className="mb-4 flex items-center justify-between">
-        <span className="font-bold text-on-surface">{monthLabel}</span>
-        <div className="flex space-x-2">
-          <button
-            type="button"
-            aria-label="Previous month"
-            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-            className="rounded-full p-1 hover:bg-surface-variant"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Next month"
-            onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-            className="rounded-full p-1 hover:bg-surface-variant"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-bold text-outline sm:gap-2">
-        {WEEKDAYS.map((d, i) => (
-          <div key={`${d}-${i}`}>{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-sm sm:gap-2">
-        {cells.map((cell) => {
-          const isPast = cell.date < today;
-          const hasSlots = Boolean(availableByDate[cell.ymd]?.length);
-            const selectable = !loadingSlots && cell.inMonth && !isPast && hasSlots;
-          const selected = selectedDate === cell.ymd && selectable;
-          const isToday = toYmd(today) === cell.ymd;
-          return (
-            <button
-              key={cell.ymd}
-              type="button"
-              disabled={!selectable}
-              onClick={() => setSelectedDate(cell.ymd)}
-              className={`p-1.5 transition-colors sm:p-2 ${
-                selected
-                  ? "rounded-lg bg-primary font-bold text-on-primary shadow-soft"
-                  : isToday && selectable
-                    ? "rounded-lg bg-primary/10 font-bold text-primary"
-                    : !selectable
-                      ? "cursor-default text-outline/40"
-                      : "rounded-lg hover:bg-surface-variant"
-              }`}
-            >
-              {cell.date.getDate()}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   const detailsBlock = (
     <div className={layout === "split" ? "flex h-full flex-col" : ""}>
       <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="meeting-time"
-            className="mb-2 block text-xs font-bold uppercase tracking-widest text-on-surface-variant"
-          >
-            Time
-          </label>
-          {loadingSlots ? (
-            <div className="flex items-center gap-2 rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface-variant">
-              <Loader2 size={16} className="animate-spin" />
-              Loading available times…
-            </div>
-          ) : timeOptions.length === 0 ? (
-            <div className="rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 text-sm text-on-surface-variant">
-              No open times on this date. Pick another day.
-            </div>
-          ) : (
-            <select
-              id="meeting-time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
-            >
-              {timeOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
         <div>
           <label
             htmlFor="meeting-purpose"
@@ -319,13 +186,13 @@ export function AdvocateBookingPanel({
             >
               Describe the reason
             </label>
-            <input
+            <textarea
               id="meeting-purpose-other"
-              type="text"
               value={customPurpose}
               onChange={(e) => setCustomPurpose(e.target.value)}
               placeholder="What would you like to discuss?"
-              className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
+              rows={3}
+              className="w-full resize-y rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary"
             />
           </div>
         ) : null}
@@ -400,22 +267,30 @@ export function AdvocateBookingPanel({
         </p>
       ) : null}
 
-      {loadingSlots ? (
-        <div className="flex min-h-[12rem] items-center justify-center gap-3 rounded-xl border border-outline-variant/30 bg-surface-container-lowest/60 py-16 text-on-surface-variant">
-          <Loader2 className="animate-spin" size={20} />
-          Loading available dates and times…
+      {upcomingMeeting ? (
+        <div className="mb-6">
+          <ScheduledMeetingNotice
+            meeting={upcomingMeeting}
+            requireProceedAck
+            proceedAcknowledged={proceedWithExistingMeeting}
+            onProceedAckChange={setProceedWithExistingMeeting}
+          />
         </div>
-      ) : layout === "split" ? (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
-          <div>{calendarBlock}</div>
-          <div>{detailsBlock}</div>
-        </div>
-      ) : (
-        <>
-          {calendarBlock}
-          {detailsBlock}
-        </>
-      )}
+      ) : null}
+
+      <div className="mb-6">
+        <AvailabilityDateTimePicker
+          days={days}
+          selectedDate={selectedDate}
+          selectedTime={time}
+          onSelectDate={setSelectedDate}
+          onSelectTime={setTime}
+          loading={loadingSlots}
+          layout={layout === "split" ? "split" : "stack"}
+        />
+      </div>
+
+      {detailsBlock}
     </div>
   );
 }

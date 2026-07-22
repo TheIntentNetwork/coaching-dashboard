@@ -5,33 +5,18 @@ import {
   Calendar,
   ChevronRight,
   Clock,
-  ExternalLink,
   Loader2,
   Sparkles,
   User,
-  Video,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
+import { MeetingJoinActions } from "@/components/meetings/meeting-join-actions";
 import { formatMeetingTitle } from "@/lib/portal/meeting-types";
 import type { PortalMeetingDetail } from "@/lib/portal/types";
 import { useMeetingDetailQuery } from "@/lib/portal/query/hooks/use-meetings";
 
-function getJoinState(meeting: PortalMeetingDetail) {
-  const canJoinStatus =
-    meeting.status === "scheduled" || meeting.status === "in_progress";
-  const hasLink = Boolean(meeting.meetingLink);
-
-  if (!canJoinStatus) {
-    return { show: false as const, enabled: false, reason: null as string | null };
-  }
-  if (!hasLink) {
-    return {
-      show: true as const,
-      enabled: false,
-      reason: "Your join link is being prepared. Refresh in a moment.",
-    };
-  }
-  return { show: true as const, enabled: true, reason: null as string | null };
+function canShowJoinActions(meeting: PortalMeetingDetail) {
+  return meeting.status === "scheduled" || meeting.status === "in_progress";
 }
 
 type QuestionAnswer = { question: string; answer: string | null };
@@ -123,7 +108,7 @@ export function MeetingDetailSection({ id }: { id: string }) {
   const questions = toQuestions(meeting.summary?.questions_json);
   const notes = toNotes(meeting.summary?.notes_json);
   const checklist = toChecklist(meeting.summary?.checklist_json);
-  const joinState = getJoinState(meeting);
+  const showJoin = canShowJoinActions(meeting);
 
   return (
     <PageShell className="pb-16">
@@ -151,46 +136,25 @@ export function MeetingDetailSection({ id }: { id: string }) {
           ) : null}
         </div>
 
-        {joinState.show ? (
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {joinState.enabled && meeting.meetingLink ? (
-              <a
-                href={meeting.meetingLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-on-primary shadow-soft transition-colors hover:bg-primary-container hover:text-on-primary-container"
-              >
-                <Video size={18} />
-                Join meeting
-                <ExternalLink size={14} className="opacity-70" />
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary/40 px-6 py-3.5 text-sm font-bold text-on-primary opacity-70"
-              >
-                <Video size={18} />
-                Join meeting
-              </button>
-            )}
-            {joinState.reason ? (
-              <p className="text-sm text-on-surface-variant">{joinState.reason}</p>
-            ) : (
-              <p className="text-sm text-on-surface-variant">
-                Remote video meeting with your advocate. Recording may be available after the
-                session.
-              </p>
-            )}
+        {showJoin ? (
+          <div className="mt-6 space-y-2">
+            <MeetingJoinActions
+              copilotJoinUrl={meeting.meetingLink}
+              thirdPartyJoinUrl={meeting.thirdPartyJoinUrl}
+              thirdPartyLabel={meeting.thirdPartyLabel}
+              layout="row"
+            />
+            <p className="text-sm text-on-surface-variant">
+              Use SustainBL Copilot for AI-assisted video, or join via Zoom/Google
+              Meet if your advocate shared an external link.
+            </p>
           </div>
-        ) : null}
-
-        {!joinState.show ? (
+        ) : (
           <p className="mt-4 text-sm text-on-surface-variant">
-            This was a remote video meeting. Recording may be available from your advocate after
-            the session.
+            This was a remote video meeting. Recording may be available from your
+            advocate after the session.
           </p>
-        ) : null}
+        )}
       </header>
 
       {meeting.summary?.summary_markdown ? (

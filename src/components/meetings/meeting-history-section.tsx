@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ExternalLink, Loader2, MapPin, Video } from "lucide-react";
+import { Loader2, MapPin, Video } from "lucide-react";
 import { AdvocateBookingPanel } from "@/components/advocate/advocate-booking-panel";
+import { ScheduledMeetingNotice } from "@/components/booking/scheduled-meeting-notice";
 import { PageHeader, PageShell } from "@/components/layout/page-shell";
+import { MeetingJoinActions } from "@/components/meetings/meeting-join-actions";
+import { useUpcomingScheduledMeeting } from "@/lib/portal/client/use-upcoming-scheduled-meeting";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import {
   formatMeetingDateLabel,
@@ -62,6 +65,7 @@ export function MeetingHistorySection() {
   const { setup } = usePortalSetup();
   const meetingsQuery = useMeetingsQuery();
   const advocateQuery = useAdvocateQuery();
+  const upcomingMeeting = useUpcomingScheduledMeeting();
   const [showBooking, setShowBooking] = useState(false);
 
   const meetings = meetingsQuery.data?.meetings || [];
@@ -73,6 +77,7 @@ export function MeetingHistorySection() {
 
   const mt = getMeetingType(setup?.meeting_type);
   const setupNotice =
+    !upcomingMeeting &&
     setup?.meeting_date &&
     (setup.status === "approved" ||
       setup.status === "submitted" ||
@@ -103,6 +108,10 @@ export function MeetingHistorySection() {
       />
 
       <div className="space-y-8">
+        {upcomingMeeting && !showBooking ? (
+          <ScheduledMeetingNotice meeting={upcomingMeeting} />
+        ) : null}
+
         {showBooking ? (
           <AdvocateBookingPanel
             layout="split"
@@ -165,16 +174,17 @@ export function MeetingHistorySection() {
                       {m.advisorName || "Your advocate"}
                     </div>
                   </Link>
-                  {m.status === "scheduled" && m.meetingLink ? (
-                    <a
-                      href={m.meetingLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
-                    >
-                      Join meeting
-                      <ExternalLink size={14} />
-                    </a>
+                  {m.status === "scheduled" ? (
+                    <div className="mt-3">
+                      <MeetingJoinActions
+                        copilotJoinUrl={m.meetingLink}
+                        thirdPartyJoinUrl={m.thirdPartyJoinUrl}
+                        thirdPartyLabel={m.thirdPartyLabel}
+                        meetingDetailHref={`/meetings/${m.id}`}
+                        layout="row"
+                        size="sm"
+                      />
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -216,16 +226,15 @@ export function MeetingHistorySection() {
                   </Link>
                   <div className="col-span-2 flex flex-col items-end gap-2 text-right">
                     <StatusBadge meeting={m} />
-                    {m.status === "scheduled" && m.meetingLink ? (
-                      <a
-                        href={m.meetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
-                      >
-                        Join
-                        <ExternalLink size={12} />
-                      </a>
+                    {m.status === "scheduled" ? (
+                      <MeetingJoinActions
+                        copilotJoinUrl={m.meetingLink}
+                        thirdPartyJoinUrl={m.thirdPartyJoinUrl}
+                        thirdPartyLabel={m.thirdPartyLabel}
+                        meetingDetailHref={`/meetings/${m.id}`}
+                        layout="row"
+                        size="sm"
+                      />
                     ) : null}
                   </div>
                 </div>

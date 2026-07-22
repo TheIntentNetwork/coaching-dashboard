@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, Shield } from "lucide-react";
-import { motion } from "framer-motion";
-import { createClient } from "@/lib/supabase/client";
 
 function PasswordField({
   id,
@@ -82,25 +80,26 @@ export function UpdatePasswordSection() {
     setError("");
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error: updateError } = await supabase.auth.updateUser({ password });
 
-    if (updateError) {
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        return;
+      }
+
+      router.replace("/setup");
+    } catch {
+      setError("Could not update password. Please try again.");
       setLoading(false);
-      setError(updateError.message);
-      return;
     }
-
-    router.replace("/setup");
-    router.refresh();
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-xl"
-    >
+    <div className="w-full max-w-xl">
       <div className="mb-10 text-center sm:mb-16">
         <h1 className="mb-4 font-headline text-4xl tracking-tight text-on-surface sm:mb-6 sm:text-5xl md:text-6xl">
           New Password
@@ -163,6 +162,6 @@ export function UpdatePasswordSection() {
           <div className="my-auto h-px w-12 bg-outline-variant" />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

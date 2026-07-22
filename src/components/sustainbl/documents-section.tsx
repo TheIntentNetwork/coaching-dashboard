@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Download, Eye, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Download, Eye, Loader2, Plus, Trash2 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageHeader } from "@/components/layout/page-shell";
@@ -144,37 +145,34 @@ export function DocumentsSection() {
         ))}
       </div>
 
-      <div className="mb-10 grid grid-cols-12 gap-4 sm:mb-16 sm:gap-6">
-        <div className="col-span-12 flex flex-col gap-6 rounded-xl bg-surface-container-low p-5 sm:flex-row sm:items-center sm:justify-between sm:p-8 md:col-span-8">
-          <div className="flex gap-6 sm:gap-12">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Total Files
-              </p>
-              <p className="font-headline text-2xl sm:text-3xl">{filtered.length}</p>
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Ready
-              </p>
-              <p className="font-headline text-2xl text-primary sm:text-3xl">{readyCount}</p>
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Processing / Issues
-              </p>
-              <p className="font-headline text-2xl text-tertiary sm:text-3xl">{actionCount}</p>
-            </div>
+      <div className="mb-8 flex flex-col gap-3 rounded-xl bg-surface-container-low px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-wrap gap-8 sm:gap-12">
+          <div>
+            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Total files
+            </p>
+            <p className="font-headline text-2xl leading-none">{filtered.length}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Ready
+            </p>
+            <p className="font-headline text-2xl leading-none text-primary">{readyCount}</p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+              Processing / issues
+            </p>
+            <p className="font-headline text-2xl leading-none text-tertiary">{actionCount}</p>
           </div>
         </div>
-        <div className="relative col-span-12 overflow-hidden rounded-xl bg-primary-container p-5 sm:p-8 md:col-span-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-on-primary-container/80">
-            Ask Copilot
-          </p>
-          <p className="font-headline text-xl leading-tight text-on-primary-container sm:text-2xl">
-            Uploads are indexed so Ask Copilot can use them in answers.
-          </p>
-        </div>
+        <Link
+          href="/ask-copilot"
+          className="inline-flex items-center gap-1.5 text-sm font-bold text-primary transition-opacity hover:opacity-80"
+        >
+          Questions? Ask Copilot
+          <ArrowRight size={14} />
+        </Link>
       </div>
 
       <div className="hidden grid-cols-12 border-b border-outline-variant/30 px-6 pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/50 md:grid">

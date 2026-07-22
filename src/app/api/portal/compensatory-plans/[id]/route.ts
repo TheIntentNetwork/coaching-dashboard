@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/portal/server/auth";
-import { insertTimelineEvent } from "@/lib/portal/server/timeline";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,10 +31,10 @@ export async function PATCH(request: Request, { params }: Params) {
     submit?: boolean;
   };
 
-  // Parents can only edit while draft; submit moves to submitted.
-  if (existing.status !== "draft" && !body.submit) {
+  // Parents can edit their plans unless the advocate has closed the case.
+  if (existing.status === "closed") {
     return NextResponse.json(
-      { error: "Only draft plans can be edited" },
+      { error: "This plan is closed and can no longer be edited" },
       { status: 400 },
     );
   }
@@ -64,11 +63,6 @@ export async function PATCH(request: Request, { params }: Params) {
   if (body.timeframe_end !== undefined) patch.timeframe_end = body.timeframe_end || null;
   if (Array.isArray(body.document_ids)) patch.document_ids = body.document_ids;
 
-  const wasDraft = existing.status === "draft";
-  if (body.submit) {
-    patch.status = "submitted";
-  }
-
   const { data, error } = await supabase
     .from("portal_compensatory_plans")
     .update(patch)
@@ -79,14 +73,6 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (wasDraft && body.submit) {
-    await insertTimelineEvent(supabase, auth.user.id, {
-      eventType: "compensatory_submitted",
-      title: "Compensatory plan submitted",
-      body: (data?.title as string) || existing.title,
-    });
   }
 
   return NextResponse.json({ item: data });
@@ -108,9 +94,9 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (existing.status !== "draft") {
+  if (existing.status === "closed") {
     return NextResponse.json(
-      { error: "Only draft plans can be deleted" },
+      { error: "This plan is closed and can no longer be deleted" },
       { status: 400 },
     );
   }

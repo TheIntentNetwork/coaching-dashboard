@@ -20,6 +20,12 @@ const emptyForm = {
   timeframe_end: "",
 };
 
+function advocateStatusLabel(status: Plan["status"]): string | null {
+  if (status === "in_progress") return "In progress with advocate";
+  if (status === "closed") return "Closed";
+  return null;
+}
+
 export function CompensatorySection() {
   const plansQuery = useCompensatoryQuery();
   const saveMutation = useCompensatoryMutation();
@@ -37,7 +43,7 @@ export function CompensatorySection() {
     (saveMutation.error ? saveMutation.error.message : null);
 
   function startEdit(plan: Plan) {
-    if (plan.status !== "draft") return;
+    if (plan.status === "closed") return;
     setEditingId(plan.id);
     setForm({
       title: plan.title,
@@ -53,7 +59,7 @@ export function CompensatorySection() {
     setForm(emptyForm);
   }
 
-  async function save(submit: boolean) {
+  async function save() {
     if (!form.title.trim()) {
       setLocalError("Title is required");
       return;
@@ -62,7 +68,7 @@ export function CompensatorySection() {
     try {
       await saveMutation.mutateAsync({
         id: editingId,
-        body: { ...form, submit },
+        body: { ...form },
       });
       resetForm();
     } catch (err) {
@@ -74,6 +80,7 @@ export function CompensatorySection() {
     setLocalError(null);
     try {
       await deleteMutation.mutateAsync(id);
+      if (editingId === id) resetForm();
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Delete failed");
     }
@@ -83,7 +90,7 @@ export function CompensatorySection() {
     <div className="page-pad">
       <PageHeader
         title="Compensatory service plans"
-        description="Track missed or delayed services your child should receive. Submit a plan so your advocate can follow up with the district."
+        description="Add missed or delayed services your child should receive. Each entry is shared with your advocate right away — you can edit or add more anytime."
       />
 
       {error ? (
@@ -94,7 +101,7 @@ export function CompensatorySection() {
 
       <section className="mb-10 rounded-xl border border-outline-variant/30 bg-surface-container-low p-5 sm:p-6">
         <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-on-surface-variant">
-          {editingId ? "Edit draft" : "New plan"}
+          {editingId ? "Edit plan" : "Add plan"}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant sm:col-span-2">
@@ -135,7 +142,7 @@ export function CompensatorySection() {
             />
           </label>
           <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant sm:col-span-2">
-            Summary / context
+            Notes
             <textarea
               value={form.summary}
               onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
@@ -149,19 +156,11 @@ export function CompensatorySection() {
           <button
             type="button"
             disabled={saving}
-            onClick={() => void save(false)}
-            className="inline-flex items-center gap-2 rounded-lg bg-surface-variant px-5 py-2.5 text-sm font-bold text-on-surface disabled:opacity-60"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            Save draft
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void save(true)}
+            onClick={() => void save()}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60"
           >
-            Submit to advocate
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {editingId ? "Save changes" : "Add plan"}
           </button>
           {editingId ? (
             <button
@@ -183,49 +182,60 @@ export function CompensatorySection() {
         <p className="text-on-surface-variant">No compensatory plans yet.</p>
       ) : (
         <ul className="space-y-4">
-          {items.map((plan) => (
-            <li
-              key={plan.id}
-              className="rounded-xl border border-outline-variant/30 bg-background p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                    {plan.status.replace("_", " ")}
-                  </p>
-                  <h3 className="mt-1 font-headline text-xl text-on-surface">{plan.title}</h3>
-                  {plan.missed_services ? (
-                    <p className="mt-2 text-sm text-on-surface-variant">{plan.missed_services}</p>
-                  ) : null}
-                  {plan.advisor_note ? (
-                    <p className="mt-3 rounded-lg bg-surface-container-low px-3 py-2 text-sm text-on-surface">
-                      <span className="font-bold">Advocate note: </span>
-                      {plan.advisor_note}
-                    </p>
+          {items.map((plan) => {
+            const statusLabel = advocateStatusLabel(plan.status);
+            const canEdit = plan.status !== "closed";
+            return (
+              <li
+                key={plan.id}
+                className="rounded-xl border border-outline-variant/30 bg-background p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    {statusLabel ? (
+                      <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                        {statusLabel}
+                      </p>
+                    ) : null}
+                    <h3 className="mt-1 font-headline text-xl text-on-surface">{plan.title}</h3>
+                    {plan.missed_services ? (
+                      <p className="mt-2 text-sm text-on-surface-variant">{plan.missed_services}</p>
+                    ) : null}
+                    {plan.summary ? (
+                      <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
+                        {plan.summary}
+                      </p>
+                    ) : null}
+                    {plan.advisor_note ? (
+                      <p className="mt-3 rounded-lg bg-surface-container-low px-3 py-2 text-sm text-on-surface">
+                        <span className="font-bold">Advocate note: </span>
+                        {plan.advisor_note}
+                      </p>
+                    ) : null}
+                  </div>
+                  {canEdit ? (
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(plan)}
+                        className="rounded-lg px-3 py-2 text-xs font-bold text-primary hover:bg-surface-variant"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void remove(plan.id)}
+                        className="rounded-lg p-2 text-on-surface-variant hover:bg-surface-variant"
+                        aria-label="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   ) : null}
                 </div>
-                {plan.status === "draft" ? (
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => startEdit(plan)}
-                      className="rounded-lg px-3 py-2 text-xs font-bold text-primary hover:bg-surface-variant"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void remove(plan.id)}
-                      className="rounded-lg p-2 text-on-surface-variant hover:bg-surface-variant"
-                      aria-label="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

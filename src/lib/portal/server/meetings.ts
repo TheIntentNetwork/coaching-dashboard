@@ -3,10 +3,12 @@ import {
   ensureAppointmentJoinCredentials,
   resolveMeetingLink,
 } from "@/lib/portal/meeting-link";
+import { parseThirdPartyMeeting } from "@/lib/portal/third-party-meeting";
 
 const APPOINTMENT_COLUMNS = `
   id, advisor_id, start_time, end_time, duration_minutes, appointment_type, status,
   meeting_link, meeting_code, meeting_token, purpose, cancellation_reason, completed_at, created_at,
+  extra_data,
   advisors ( id, first_name, last_name )
 `;
 
@@ -27,6 +29,7 @@ type RawAppointment = {
   cancellation_reason: string | null;
   completed_at: string | null;
   created_at: string;
+  extra_data: unknown;
   advisors: AdvisorRef | AdvisorRef[] | null;
 };
 
@@ -40,6 +43,8 @@ export type SanitizedAppointment = {
   appointmentType: string | null;
   status: string;
   meetingLink: string | null;
+  thirdPartyJoinUrl: string | null;
+  thirdPartyLabel: "zoom" | "meet" | "other" | null;
   meetingCode: string | null;
   purpose: string | null;
   cancellationReason: string | null;
@@ -49,6 +54,12 @@ export type SanitizedAppointment = {
 
 function sanitizeAppointment(row: RawAppointment): SanitizedAppointment {
   const advisor = Array.isArray(row.advisors) ? row.advisors[0] : row.advisors;
+  const thirdParty = parseThirdPartyMeeting(row.extra_data);
+  const copilotLink = resolveMeetingLink({
+    appointmentId: row.id,
+    meetingLink: row.meeting_link,
+    meetingToken: row.meeting_token,
+  });
 
   return {
     id: row.id,
@@ -59,11 +70,9 @@ function sanitizeAppointment(row: RawAppointment): SanitizedAppointment {
     durationMinutes: row.duration_minutes,
     appointmentType: row.appointment_type,
     status: row.status,
-    meetingLink: resolveMeetingLink({
-      appointmentId: row.id,
-      meetingLink: row.meeting_link,
-      meetingToken: row.meeting_token,
-    }),
+    meetingLink: copilotLink,
+    thirdPartyJoinUrl: thirdParty?.url ?? null,
+    thirdPartyLabel: thirdParty?.label ?? null,
     meetingCode: row.meeting_code,
     purpose: row.purpose,
     cancellationReason: row.cancellation_reason,
@@ -82,10 +91,10 @@ export async function fetchAppointmentsForUser(
   email: string | null,
 ): Promise<SanitizedAppointment[]> {
   const admin = createAdminClient();
-  const base = admin.from("appointments").select(APPOINTMENT_COLUMNS);
+  const appointmentsQuery = admin.from("appointments").select(APPOINTMENT_COLUMNS);
   const scoped = email
-    ? base.or(`veteran_user_id.eq.${userId},veteran_email.eq.${email}`)
-    : base.eq("veteran_user_id", userId);
+    ? appointmentsQuery.or(`veteran_user_id.eq.${userId},veteran_email.eq.${email}`)
+    : appointmentsQuery.eq("veteran_user_id", userId);
 
   const { data, error } = await scoped.order("start_time", { ascending: false });
   if (error) throw error;
@@ -93,17 +102,16 @@ export async function fetchAppointmentsForUser(
   const rows = (data ?? []) as unknown as RawAppointment[];
   const sanitized = await Promise.all(
     rows.map(async (row) => {
+      const appointment = sanitizeAppointment(row);
       if (
+        !appointment.thirdPartyJoinUrl &&
         (row.status === "scheduled" || row.status === "in_progress") &&
         !row.meeting_token
       ) {
         const link = await ensureAppointmentJoinCredentials(row.id);
-        return {
-          ...sanitizeAppointment(row),
-          meetingLink: link,
-        };
+        return { ...appointment, meetingLink: link };
       }
-      return sanitizeAppointment(row);
+      return appointment;
     }),
   );
 
@@ -116,25 +124,27 @@ export async function fetchAppointmentForUser(
   email: string | null,
 ): Promise<SanitizedAppointment | null> {
   const admin = createAdminClient();
-  const base = admin.from("appointments").select(APPOINTMENT_COLUMNS).eq("id", appointmentId);
+  const query = admin.from("appointments").select(APPOINTMENT_COLUMNS).eq("id", appointmentId);
   const scoped = email
-    ? base.or(`veteran_user_id.eq.${userId},veteran_email.eq.${email}`)
-    : base.eq("veteran_user_id", userId);
+    ? query.or(`veteran_user_id.eq.${userId},veteran_email.eq.${email}`)
+    : query.eq("veteran_user_id", userId);
 
   const { data, error } = await scoped.maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
   const row = data as unknown as RawAppointment;
+  const sanitized = sanitizeAppointment(row);
   if (
+    !sanitized.thirdPartyJoinUrl &&
     (row.status === "scheduled" || row.status === "in_progress") &&
     (!row.meeting_token || !row.meeting_link)
   ) {
     const link = await ensureAppointmentJoinCredentials(row.id);
-    return { ...sanitizeAppointment(row), meetingLink: link };
+    return { ...sanitized, meetingLink: link };
   }
 
-  return sanitizeAppointment(row);
+  return sanitized;
 }
 
 export type UserMeetingSummary = {

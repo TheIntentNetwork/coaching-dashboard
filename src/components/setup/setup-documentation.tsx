@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, FileText, Loader2, Lock, Upload } from "lucide-react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CoverImage } from "@/components/ui/cover-image";
 import { usePortalSetup } from "@/lib/portal/client/use-portal-setup";
 import { SetupWaiting } from "@/components/setup/setup-waiting";
@@ -194,6 +194,21 @@ export function SetupDocumentation() {
               PDF only · Maximum 50MB
             </p>
           </label>
+
+          <AnimatePresence>
+            {uploading ? (
+              <motion.p
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="mt-4 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-sm leading-relaxed text-on-surface"
+              >
+                Uploading your file — this usually takes one or two minutes while we prepare
+                it for Ask Copilot.
+              </motion.p>
+            ) : null}
+          </AnimatePresence>
 
           {error ? <p className="mt-4 text-sm text-tertiary">{error}</p> : null}
 

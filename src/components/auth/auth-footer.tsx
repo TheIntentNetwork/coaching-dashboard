@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/brand-logo";
 
-export function AuthFooter() {
+type AuthFooterProps = {
+  /** When null, logo is not a link (password-setup must not bounce to /dashboard). */
+  logoHref?: string | null;
+};
+
+export function AuthFooter({ logoHref = "/" }: AuthFooterProps) {
   return (
     <footer className="border-t border-outline-variant/60 bg-surface">
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 sm:px-8 sm:py-12 md:flex-row">
-        <BrandLogo href="/" size="sm" />
+        <BrandLogo href={logoHref} size="sm" />
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
           <Link
             href="#"
@@ -21,6 +26,7 @@ export function AuthFooter() {
           </Link>
           <Link
             href="/advocate"
+            prefetch={false}
             className="font-body text-xs uppercase tracking-widest text-on-surface-variant opacity-80 transition-colors hover:text-tertiary hover:opacity-100"
           >
             Contact Support

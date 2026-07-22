@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Send } from "lucide-react";
 import { useAppSession } from "@/components/auth/session-provider";
-import { PageHeader, PageShell } from "@/components/layout/page-shell";
+import { PageHeader } from "@/components/layout/page-shell";
 import type { MessageThreadSummary, SecureMessage } from "@/lib/portal/types";
 import {
   useMessageThreadQuery,
@@ -105,45 +105,48 @@ export function FollowUpSection() {
   }
 
   return (
-    <PageShell width="narrow" className="pb-16 sm:pb-20">
-      <PageHeader
-        title="Messages"
-        description={`Message your ${noun} directly to close the loop after meetings, ask questions, or share updates.`}
-      />
+    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-5xl flex-col px-4 sm:px-6 lg:h-screen lg:px-12">
+      <div className="shrink-0 py-6 sm:py-8">
+        <PageHeader
+          title="Messages"
+          description={`Message your ${noun} directly to close the loop after meetings, ask questions, or share updates.`}
+          className="mb-0"
+        />
 
-      {error ? (
-        <p className="mb-6 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="mt-4 rounded-lg border border-tertiary/30 bg-tertiary/5 px-4 py-3 text-sm text-tertiary">
+            {error}
+          </p>
+        ) : null}
+      </div>
 
       {loading ? (
-        <div className="flex items-center gap-3 py-16 text-on-surface-variant">
+        <div className="flex flex-1 items-center gap-3 text-on-surface-variant">
           <Loader2 className="animate-spin" size={18} />
           Loading messages…
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft">
-          <div className="flex items-center justify-between border-b border-outline-variant/30 px-4 py-4 sm:px-6 sm:py-5">
-            <div>
-              <p className="font-headline text-lg text-on-surface sm:text-xl">
-                {activeThread?.advisorName ||
-                  `Your ${noun.charAt(0).toUpperCase()}${noun.slice(1)}`}
-              </p>
-              <p className="text-xs text-on-surface-variant">
-                {activeThread?.subject || `Message to your ${noun}`}
-              </p>
-            </div>
+        <div className="mb-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft sm:mb-6">
+          <div className="shrink-0 border-b border-outline-variant/30 px-4 py-4 sm:px-6">
+            <p className="font-headline text-lg text-on-surface sm:text-xl">
+              {activeThread?.advisorName ||
+                `Your ${noun.charAt(0).toUpperCase()}${noun.slice(1)}`}
+            </p>
+            <p className="mt-0.5 text-sm text-on-surface-variant">
+              {activeThread?.subject || `Message to your ${noun}`}
+            </p>
           </div>
 
           <div
             ref={scrollRef}
-            className="max-h-[28rem] space-y-4 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
           >
             {messages.length === 0 ? (
-              <p className="text-sm italic text-on-surface-variant">
-                No messages yet. Send the first message to your {noun} below.
-              </p>
+              <div className="flex h-full min-h-[12rem] items-center justify-center">
+                <p className="max-w-sm text-center text-sm italic text-on-surface-variant">
+                  No messages yet. Send the first message to your {noun} below.
+                </p>
+              </div>
             ) : (
               messages.map((m) => (
                 <div
@@ -174,7 +177,7 @@ export function FollowUpSection() {
           </div>
 
           {waitingForAdvocate ? (
-            <div className="border-t border-outline-variant/30 bg-surface-container-low px-4 py-3 sm:px-6">
+            <div className="shrink-0 border-t border-outline-variant/30 bg-surface-container-low px-4 py-3 sm:px-6">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
                 {atMessageLimit
                   ? `Waiting for ${noun} response (2-message limit)`
@@ -183,37 +186,39 @@ export function FollowUpSection() {
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 border-t border-outline-variant/30 px-4 py-4 sm:flex-row sm:items-end sm:px-6 sm:py-5">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!atMessageLimit) void sendMessage();
+          <div className="shrink-0 border-t border-outline-variant/30 bg-surface-container-lowest px-4 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!atMessageLimit) void sendMessage();
+                  }
+                }}
+                placeholder={
+                  atMessageLimit
+                    ? `Wait for your ${noun} to reply before sending more…`
+                    : `Write a message to your ${noun}…`
                 }
-              }}
-              placeholder={
-                atMessageLimit
-                  ? `Wait for your ${noun} to reply before sending more…`
-                  : `Write a message to your ${noun}…`
-              }
-              rows={2}
-              disabled={atMessageLimit}
-              className="w-full flex-1 resize-none rounded-lg border border-outline-variant/50 bg-transparent px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary disabled:opacity-50"
-            />
-            <button
-              type="button"
-              disabled={sending || !draft.trim() || atMessageLimit}
-              onClick={() => void sendMessage()}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60 sm:w-auto"
-            >
-              {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              Send
-            </button>
+                rows={2}
+                disabled={atMessageLimit}
+                className="w-full flex-1 resize-none rounded-lg border border-outline-variant/50 bg-background px-4 py-3 font-body text-sm text-on-surface outline-none focus:border-primary disabled:opacity-50"
+              />
+              <button
+                type="button"
+                disabled={sending || !draft.trim() || atMessageLimit}
+                onClick={() => void sendMessage()}
+                className="flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary shadow-soft transition-all active:scale-95 disabled:opacity-60 sm:w-auto"
+              >
+                {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                Send
+              </button>
+            </div>
           </div>
         </div>
       )}
-    </PageShell>
+    </div>
   );
 }

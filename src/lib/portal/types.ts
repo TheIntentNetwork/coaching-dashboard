@@ -77,10 +77,16 @@ export type PortalPriorityAction = {
 export type PortalUpcomingMeeting =
   | {
       meetingDate: string;
+      /** ISO timestamp — preferred source for countdown when available. */
+      startsAt?: string | null;
       dateLabel: string;
       meetingType: string | null;
       focus: string | null;
       studentName: string | null;
+      appointmentId?: string | null;
+      copilotJoinUrl?: string | null;
+      thirdPartyJoinUrl?: string | null;
+      thirdPartyLabel?: "zoom" | "meet" | "other" | null;
     }
   | "still_not_set";
 
@@ -144,6 +150,8 @@ export type PortalMeeting = {
   appointmentType: string | null;
   status: string;
   meetingLink: string | null;
+  thirdPartyJoinUrl?: string | null;
+  thirdPartyLabel?: "zoom" | "meet" | "other" | null;
   meetingCode: string | null;
   purpose: string | null;
   cancellationReason: string | null;

@@ -8,7 +8,8 @@ const LOGO_BY_THEME: Record<PortalTheme, string> = {
 };
 
 type BrandLogoProps = {
-  href?: string;
+  /** Pass `null` for a non-clickable mark (e.g. password setup). Omit for default `/dashboard`. */
+  href?: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
   showWordmark?: boolean;
@@ -33,7 +34,7 @@ const WORDMARK = {
 } as const;
 
 export function BrandLogo({
-  href = "/dashboard",
+  href,
   size = "md",
   className = "",
   showWordmark = true,
@@ -44,6 +45,7 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const dims = SIZES[size];
   const logoSrc = LOGO_BY_THEME[theme];
+  const resolvedHref = href === undefined ? "/dashboard" : href;
 
   const mark = (
     <span className={`inline-flex items-center gap-3 ${className}`}>
@@ -72,7 +74,7 @@ export function BrandLogo({
     </span>
   );
 
-  if (!href) {
+  if (!resolvedHref) {
     return (
       <span className="inline-flex shrink-0" aria-label="SustainBL">
         {mark}
@@ -82,8 +84,9 @@ export function BrandLogo({
 
   return (
     <Link
-      href={href}
+      href={resolvedHref}
       onClick={onClick}
+      prefetch={false}
       className="inline-flex shrink-0"
       aria-label="SustainBL home"
     >

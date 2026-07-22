@@ -3,7 +3,7 @@
 This checklist verifies the parent-vs-student identity split and intake sync across:
 
 - `sustainable-website` (intake + advisor portal)
-- `brand` (client portal)
+- `iep-user-dashboard` (client portal)
 
 Use this as a browser test script.
 
@@ -48,7 +48,7 @@ Use this as a browser test script.
 - A `portal_iep_profiles` row exists for the enrolled `user_id`.
 - Row includes child/case fields from intake:
   - `child_name`, `grade_level`, `school_district`, `current_iep_status`, etc.
-- `intake_answers` JSON contains full raw intake payload.
+- `intake_answers` JSON on `portal_iep_profiles` contains synced copy from enrollment (sourced from `lead_magnets.metadata.intake_answers`).
 - `portal_setup.student_name` is seeded with `child_name` if setup name was empty.
 
 ## Test 3: Client dashboard identity split + student overview
@@ -138,7 +138,7 @@ Use this as a browser test script.
   - Student profile section
   - Meeting context section (challenges, goals, accommodations, services, concerns)
   - Raw intake answers section
-- Values are populated from `portal_iep_profiles` + `intake_answers`.
+- Values are populated from `portal_iep_profiles` + synced `lead_magnets` intake answers.
 - `Synced from intake` timestamp is present when sync completed.
 
 ## Test 7b: Accommodations + Prep seeded from survey

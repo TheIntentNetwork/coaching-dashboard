@@ -1,9 +1,9 @@
 ---
-description: IEP/Coaching brand portal architecture and sustainable-website connections
+description: IEP/Coaching client portal architecture and sustainable-website connections
 alwaysApply: true
 ---
 
-# Brand portal (IEP / Coaching)
+# IEP user dashboard (IEP / Coaching)
 
 This repo is the **client portal** for IEP and Coaching only. VA Claims stays on `sustainable-website`.
 
@@ -11,7 +11,7 @@ This repo is the **client portal** for IEP and Coaching only. VA Claims stays on
 
 | App | Path | Role | Local port |
 |-----|------|------|------------|
-| Brand portal | this repo (`brand`) | Parent/client UI | **3001** |
+| IEP user dashboard | this repo (`iep-user-dashboard`) | Parent/client UI | **3001** |
 | Sustainable website | `../sustainable-website` | Marketing, funnels, advisor/admin, VA Claims clients, enrollment | **3000** |
 | SustainBL Copilot | `../sustainbl-copilot` | In-meeting AI package | — |
 
@@ -19,12 +19,12 @@ This repo is the **client portal** for IEP and Coaching only. VA Claims stays on
 
 - **Supabase project_id**: `cgghmctyygkqzalfhqsx` (same DB/auth for both apps)
 - Use Supabase MCP `execute_sql` for schema/data; do not invent another project
-- Stripe keys are shared conceptually; brand handles `portal_session_booking` checkout/webhook for extra sessions
-- Enrollment + advisor assignment happen in **sustainable-website**; brand reads `advisor_enrollments`, `appointments`, `profiles`
+- Stripe keys are shared conceptually; this portal handles `portal_session_booking` checkout/webhook for extra sessions
+- Enrollment + advisor assignment happen in **sustainable-website**; this portal reads `advisor_enrollments`, `appointments`, `profiles`
 
 ## Routing contract
 
-- IEP/Coaching password/setup links → `CLIENT_PORTAL_URL` / `NEXT_PUBLIC_CLIENT_PORTAL_URL` (brand)
+- IEP/Coaching password/setup links → `CLIENT_PORTAL_URL` / `NEXT_PUBLIC_CLIENT_PORTAL_URL` (this portal)
 - Implemented in sustainable-website: `src/lib/auth/client-portal-url.ts`, `generateClientSetupLink`
 - VA Claims → main SustainBL site URL only
 
@@ -32,7 +32,7 @@ This repo is the **client portal** for IEP and Coaching only. VA Claims stays on
 
 - Do **not** rebuild IEP/Coaching dashboards inside sustainable-website
 - Advisor review, enrollment, Stripe catalog, messaging from coach → sustainable-website
-- Parent journey UI → brand
+- Parent journey UI → this repo
 - Track done/left in `TODO.md`; deferred RAG in `README.md`
 - Embeddings: EC2 Ollama via `OLLAMA_EMBED_BASE_URL` + `nomic-embed-text`; chat stays on `OLLAMA_BASE_URL` (cloud)
 
@@ -40,3 +40,7 @@ This repo is the **client portal** for IEP and Coaching only. VA Claims stays on
 
 - `service_type` coaching → warm accents, “My Coach”
 - Anything else in this portal → IEP theme, “My Advocate”
+
+## Shared intake data (all services)
+
+Survey answers live on **`lead_magnets.metadata.intake_answers`** in the shared DB — same table for IEP, Coaching, and VA Claims funnels. Do **not** add duplicate survey tables; read/write through `lead_magnets` only. See `../sustainable-website/.cursor/rules/shared-intake-data-model.mdc`.

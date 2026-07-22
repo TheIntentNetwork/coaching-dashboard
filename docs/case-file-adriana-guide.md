@@ -6,7 +6,7 @@ How the new **Case file** features work, who they help, how to test them, and wh
 
 | App | Port (local) | Who uses it |
 |-----|--------------|-------------|
-| `brand` (client portal) | `:3001` | Parent / family |
+| `iep-user-dashboard` (client portal) | `:3001` | Parent / family |
 | `sustainable-website` (advisor portal) | `:3000` | Advocate / coach |
 
 **Who sees what**

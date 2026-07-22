@@ -1,4 +1,4 @@
-# SustainBL Brand Frontend
+# SustainBL IEP User Dashboard
 
 IEP / Coaching client portal (Next.js). Shares Supabase auth and data with `sustainable-website`.
 

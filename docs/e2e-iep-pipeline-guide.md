@@ -1,7 +1,7 @@
 # IEP end-to-end pipeline — manual test guide
 
 Last updated: 2026-07-20  
-Apps: **sustainable-website** (funnels + advisor + meeting host) · **brand** (IEP / Coaching client portal)  
+Apps: **sustainable-website** (funnels + advisor + meeting host) · **iep-user-dashboard** (IEP / Coaching client portal)  
 Shared DB: Supabase `cgghmctyygkqzalfhqsx`  
 VA Claims stays on the main site — this guide is **IEP-focused** (Coaching notes where it differs).
 
@@ -14,7 +14,7 @@ Prospect (marketing)
     → Intake (IEP)
     → Book consultation (schedule)
     → Advisor enrolls + Stripe
-    → Setup email → brand portal password
+    → Setup email → IEP user dashboard password
     → Parent Set Schedule (milestone + IEP draft)
     → Advisor reviews / approves setup
     → Parent uses Case file + books sessions
@@ -26,7 +26,7 @@ Prospect (marketing)
 | App | Role | Local URL |
 |-----|------|-----------|
 | `sustainable-website` | Marketing, intake, consult booking, advisor portal, Stream host/guest meeting | http://localhost:3000 |
-| `brand` | Parent / client portal after enrollment | http://localhost:3001 |
+| `iep-user-dashboard` | Parent / client portal after enrollment | http://localhost:3001 |
 
 ---
 
@@ -39,7 +39,7 @@ Prospect (marketing)
 cd ../sustainable-website && npm run dev   # :3000
 
 # Terminal 2 — client portal
-cd brand && npm run dev                    # :3001
+cd iep-user-dashboard && npm run dev                    # :3001
 ```
 
 ### Env checklist
@@ -54,7 +54,7 @@ cd brand && npm run dev                    # :3001
 | Resend / email | Welcome + coach message emails |
 | Stream / Copilot keys | Live meetings |
 
-**brand**
+**iep-user-dashboard**
 
 | Variable | Local value / note |
 |----------|--------------------|
@@ -156,7 +156,7 @@ flowchart LR
 
 - `profiles.service_type = iep`
 - `advisor_enrollments.sessions_included` set (IEP default **2** if catalog unset)
-- Welcome email with **brand** setup link (`CLIENT_PORTAL_URL`)
+- Welcome email with **iep-user-dashboard** setup link (`CLIENT_PORTAL_URL`)
 
 **Fail clues**
 
@@ -166,7 +166,7 @@ flowchart LR
 
 ---
 
-## 6. Phase D — Password setup → brand portal
+## 6. Phase D — Password setup → IEP user dashboard
 
 **Goal:** Parent can sign into brand on `:3001`.
 
@@ -347,7 +347,7 @@ Use this order so each phase unlocks the next:
 | Host meeting | `/advisor/meeting/{appointmentId}` |
 | Settings | `/advisor/settings?tab=account` |
 
-### Parent brand (`:3001`)
+### Parent portal (`:3001`)
 
 | Page | URL |
 |------|-----|

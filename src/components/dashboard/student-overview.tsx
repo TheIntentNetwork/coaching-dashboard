@@ -11,9 +11,29 @@ function Field({ label, value }: { label: string; value: string | null | undefin
       <dt className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
         {label}
       </dt>
-      <dd className="mt-1 text-sm leading-relaxed text-on-surface whitespace-pre-wrap">
+      <dd className="mt-1 font-headline text-lg leading-snug text-on-surface">{value}</dd>
+    </div>
+  );
+}
+
+function NarrativeRow({
+  label,
+  value,
+  italic,
+}: {
+  label: string;
+  value: string;
+  italic?: boolean;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)] sm:items-start sm:gap-6">
+      <p className="text-sm font-bold text-primary">{label}</p>
+      <span className="hidden h-full w-px bg-outline-variant/60 sm:block" aria-hidden />
+      <p
+        className={`text-sm leading-relaxed text-on-surface whitespace-pre-wrap ${italic ? "italic" : ""}`}
+      >
         {value}
-      </dd>
+      </p>
     </div>
   );
 }
@@ -43,8 +63,8 @@ export function StudentOverview() {
 
   if (!profile) {
     return (
-      <section className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-5">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+      <section className="py-2">
+        <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-primary">
           Student overview
         </h2>
         <p className="text-sm text-on-surface-variant">
@@ -63,7 +83,7 @@ export function StudentOverview() {
   );
 
   return (
-    <section className="space-y-5 rounded-xl border border-outline-variant/30 bg-surface-container-low p-5 sm:p-6">
+    <section className="space-y-8 py-2">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-widest text-primary">
@@ -82,7 +102,7 @@ export function StudentOverview() {
         </Link>
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-2">
+      <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Student name" value={profile.childName || data?.studentName} />
         <Field label="Age range" value={profile.childAge} />
         <Field label="Grade level" value={profile.gradeLevel} />
@@ -95,13 +115,27 @@ export function StudentOverview() {
       </dl>
 
       {hasNarrative ? (
-        <dl className="grid gap-4 border-t border-outline-variant/30 pt-5">
-          <Field label="Biggest school challenges" value={profile.currentChallenges} />
-          <Field label="IEP goals" value={profile.iepGoals} />
-          <Field label="Accommodations / modifications" value={profile.accommodationsNeeded} />
-          <Field label="Parent concerns" value={profile.parentConcerns} />
-          <Field label="Additional context" value={profile.additionalInfo} />
-        </dl>
+        <div className="space-y-6 border-t border-outline-variant/40 pt-8">
+          {profile.currentChallenges ? (
+            <NarrativeRow label="Biggest school challenges" value={profile.currentChallenges} />
+          ) : null}
+          {profile.iepGoals ? (
+            <NarrativeRow label="IEP goals" value={profile.iepGoals} />
+          ) : null}
+          {profile.accommodationsNeeded ? (
+            <NarrativeRow label="Accommodations" value={profile.accommodationsNeeded} />
+          ) : null}
+          {profile.parentConcerns ? (
+            <NarrativeRow label="Parent concerns" value={profile.parentConcerns} />
+          ) : null}
+          {profile.additionalInfo ? (
+            <NarrativeRow
+              label="Additional context"
+              value={profile.additionalInfo}
+              italic
+            />
+          ) : null}
+        </div>
       ) : null}
     </section>
   );
